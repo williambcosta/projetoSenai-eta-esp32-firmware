@@ -21,7 +21,7 @@ class SensorTurbidez {
     SensorTurbidez(uint8_t pino);
     SensorTurbidez(uint8_t pino, uint8_t amostras);
 
-    float getTurbidez();
+    float getTurbidez();  // Retorna o valor de turbidez em NTU
 };
 
 #endif

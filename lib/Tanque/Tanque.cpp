@@ -4,10 +4,14 @@
 
 #include "Tanque.h"
 
-Tanque::Tanque(uint8_t pinoTemp, uint8_t pinoPH, uint8_t pinoTurbidez, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo) {
+Tanque::Tanque(uint8_t pinoTemp, uint8_t pinoPH, uint8_t pinoTurbidez, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo, const std::vector<Atuador>& atuadores) {
+    Tanque();
+
     // Inicializa os membros da classe
     this->pinoNivelAlto = pinoNivelAlto;
     this->pinoNivelBaixo = pinoNivelBaixo;
+    this->atuadores = atuadores;
+
     temperatura = SensorTemperatura(pinoTemp);
     turbidez = SensorTurbidez(pinoTurbidez);
 
@@ -37,13 +41,8 @@ bool Tanque::isNivelAlto() {
     return digitalRead(this->pinoNivelAlto) == LOW && digitalRead(this->pinoNivelBaixo) == LOW;
 }
 
-// Função que indica se o nível da água do tanque está baixo
-bool Tanque::isNivelBaixo() {
-    return digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == LOW;
-}
-
 // Função que indica se o tanque está vazio
-bool Tanque::isVazio() {
+bool Tanque::isNivelBaixo() {
     return digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == HIGH;
 }
 
@@ -56,4 +55,32 @@ bool Tanque::isFalhaSensores() {
     }
 
     return false;
+}
+
+/*
+ * Função responsável por indicar o estado do atuador indicado.
+ *
+ * Retorna FALSE mesmo quando não existir o indice solicitado. Deve ser usada em conjunto com hasAtuador(indiceAtuador)
+ */
+bool Tanque::isAtuadorLigado(uint8_t indiceAtuador) {
+    if (hasAtuador(indiceAtuador)) {  // Verifica se o indice é maior ou igual ao tamanho do vetor
+        return false;                 // caso seja retorna null pointer
+    }
+
+    return atuadores[indiceAtuador].getStatus();  // Caso contrário retorna a referencia do atuador indicado
+}
+
+// Verifica se existe um atuador no indice indicado. Retorna True caso exista
+bool Tanque::hasAtuador(uint8_t indiceAtuador) {
+    return (indiceAtuador >= 0) && (indiceAtuador < atuadores.size());
+}
+
+// Liga o atuador indicado.
+void Tanque::ligaAtuador(uint8_t indiceAtuador) {
+    atuadores[indiceAtuador].liga();
+}
+
+// Desliga o atuador indicado.
+void Tanque::desligaAtuador(uint8_t indiceAtuador) {
+    atuadores[indiceAtuador].desliga();
 };
