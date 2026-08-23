@@ -50,13 +50,15 @@
 #define PIN_LAMPADA_UV 28           // Pino da lâmpada UV
 
 // Instancias dos sensores de temperatura
-const SensorTemperatura tempArmazenamento = SensorTemperatura(PIN_TEMP_AGUA_BRUTA); // Sensor de temperatura da água bruta
-const SensorTemperatura tempTrat = SensorTemperatura(PIN_TEMP_TRAT);                // Sensor de temperatura da água em tratamento
-const SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);              // Sensor de temperatura da água final
+SensorTemperatura tempArmazenamento = SensorTemperatura(PIN_TEMP_AGUA_BRUTA); // Sensor de temperatura da água bruta
+SensorTemperatura tempTrat = SensorTemperatura(PIN_TEMP_TRAT);                // Sensor de temperatura da água em tratamento
+SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);              // Sensor de temperatura da água final
 
 
 /* ----- Configuração inicial ----- */
 void setup() {
+    // TODO: Implementar o tanque de mistura
+    // TODO: Criar instancias de tanque para cada um deles
     // Define os pinos dos sensores de nível como entrada
     pinMode(PIN_SNA_AGUA_BRUTA, INPUT_PULLDOWN);
     pinMode(PIN_SNB_AGUA_BRUTA, INPUT_PULLDOWN);
@@ -81,11 +83,14 @@ void setup() {
     pinMode(PIN_DOSADOR_HIPOCLORITO, OUTPUT);
 
     pinMode(PIN_SOLENOIDE, OUTPUT);
-    
+
     pinMode(PIN_LAMPADA_UV, OUTPUT);
 }
 
 
 /* ----- Loop principal ----- */
 void loop() {
+    // Verificações do tanque de água bruta
+    tempArmazenamento.getTemperatura();    // Obtém a temperatura
+
 }
