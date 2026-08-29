@@ -1,6 +1,6 @@
 /*
  * Classe responsável por ler e calcular a turbidez da água em NTU (Nephelometric Turbidity Units) a partir de um sensor de turbidez conectado ao ESP32.
- * 
+ *
  * O valor NTU é calculado a partir da tensão obtida segindo a formula: NTU = -1120.4 * (tensão^2) + 5742.3 * tensão - 4352.9,
  * onde a tensão é a média das leituras do sensor. Essa média auxilia na eliminação de ruidos, garantindo uma medição mais precisa e confiável.
  *
@@ -8,13 +8,12 @@
 
 #include "SensorTurbidez.h"
 
-SensorTurbidez::SensorTurbidez(uint8_t pino) {
-    SensorTurbidez(); 
-    pinoTurbidez = pino;
+SensorTurbidez::SensorTurbidez(uint8_t pinoTurbidez) {
+    this->pinoTurbidez = pinoTurbidez;
 }
 
-SensorTurbidez::SensorTurbidez(uint8_t pino, uint8_t amostras) {
-    SensorTurbidez(pino);
+SensorTurbidez::SensorTurbidez(uint8_t pinoTurbidez, uint16_t amostras) {
+    this->pinoTurbidez = pinoTurbidez;
     this->amostras = amostras;
 }
 
@@ -46,9 +45,22 @@ void SensorTurbidez::calculaNTU() {
     }
 }
 
-
 // Retorna o valor de turbidez em NTU
 float SensorTurbidez::getTurbidez() {
     calculaNTU();  // Chama a função que calcula a turbidez em NTU
-    return ntu;    // Retorna o valor de turbidez em NTU
+
+    // Log de eventos
+    if (isLogAtivo) {
+        Serial.print("Turbidez medida no sensor conectado no pino ");
+        Serial.print(pinoTurbidez);
+        Serial.print(" : ");
+        Serial.println(ntu);
+    }
+
+    return ntu;  // Retorna o valor de turbidez em NTU
+}
+
+// Função responsável por indicar se o log de eventos deve ser ativado
+void SensorTurbidez::setLogEventos(bool logAtivo) {
+    isLogAtivo = logAtivo;
 }

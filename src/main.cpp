@@ -1,6 +1,8 @@
 /* ----- BIBLIOTECAS ----- */
 #include <Arduino.h>
+
 #include "SensorTemperatura.h"
+#include "SensorTurbidez.h"
 
 /* ----- DEFINICÕES ----- */
 // Sensores de temperatura
@@ -9,7 +11,7 @@
 #define PIN_TEMP_FINAL 7            // Pino do sensor de temperatura da água final
 
 // Sensores de turbidez
-#define PIN_TBDZ_AGUA_BRUTA 3       // Pino do sensor de turbidez da água bruta
+#define PIN_TBDZ_AGUA_BRUTA 35       // Pino do sensor de turbidez da água bruta
 #define PIN_TBDZ_TRAT 6             // Pino do sensor de turbidez da água tratada
 #define PIN_TBDZ_FINAL 9            // Pino do sensor de turbidez da água final
 
@@ -50,9 +52,11 @@
 #define PIN_LAMPADA_UV 28           // Pino da lâmpada UV
 
 // Instancias dos sensores de temperatura
-SensorTemperatura tempArmazenamento = SensorTemperatura(PIN_TEMP_AGUA_BRUTA); // Sensor de temperatura da água bruta
-SensorTemperatura tempTrat = SensorTemperatura(PIN_TEMP_TRAT);                // Sensor de temperatura da água em tratamento
-SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);              // Sensor de temperatura da água final
+//SensorTemperatura tempArmazenamento = SensorTemperatura(PIN_TEMP_AGUA_BRUTA); // Sensor de temperatura da água bruta
+//SensorTemperatura tempTrat = SensorTemperatura(PIN_TEMP_TRAT);                // Sensor de temperatura da água em tratamento
+//SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);              // Sensor de temperatura da água final
+
+//SensorTurbidez ntu = SensorTurbidez(PIN_TBDZ_AGUA_BRUTA, 500);
 
 
 /* ----- Configuração inicial ----- */
@@ -85,12 +89,22 @@ void setup() {
     pinMode(PIN_SOLENOIDE, OUTPUT);
 
     pinMode(PIN_LAMPADA_UV, OUTPUT);
+
+    //ntu.setLogEventos(true);
+
+    Serial.begin(115200);  // Inicializa a comunicação serial com o computador
+    Serial.println("Conectado");
 }
 
 
 /* ----- Loop principal ----- */
 void loop() {
+    Serial.println("Conectado");
     // Verificações do tanque de água bruta
-    tempArmazenamento.getTemperatura();    // Obtém a temperatura
+    //tempArmazenamento.getTemperatura();    // Obtém a temperatura
+
+    //ntu.getTurbidez();
+
+    delay(500);
 
 }

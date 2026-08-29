@@ -15,7 +15,7 @@ class SensorTemperatura {
 
    public:
     SensorTemperatura() {
-        oneWire = OneWire(0);
+        oneWire = OneWire(32);
         sensor = DallasTemperature(&oneWire);
         sensor.begin();
     };
