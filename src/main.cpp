@@ -56,11 +56,12 @@
 //SensorTemperatura tempTrat = SensorTemperatura(PIN_TEMP_TRAT);                // Sensor de temperatura da água em tratamento
 //SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);              // Sensor de temperatura da água final
 
-//SensorTurbidez ntu = SensorTurbidez(PIN_TBDZ_AGUA_BRUTA, 500);
+SensorTurbidez ntu = SensorTurbidez(PIN_TBDZ_AGUA_BRUTA, 500);
 
 
 /* ----- Configuração inicial ----- */
 void setup() {
+/*
     // TODO: Implementar o tanque de mistura
     // TODO: Criar instancias de tanque para cada um deles
     // Define os pinos dos sensores de nível como entrada
@@ -89,22 +90,17 @@ void setup() {
     pinMode(PIN_SOLENOIDE, OUTPUT);
 
     pinMode(PIN_LAMPADA_UV, OUTPUT);
-
-    //ntu.setLogEventos(true);
+*/
 
     Serial.begin(115200);  // Inicializa a comunicação serial com o computador
-    Serial.println("Conectado");
 }
 
 
 /* ----- Loop principal ----- */
 void loop() {
-    Serial.println("Conectado");
-    // Verificações do tanque de água bruta
-    //tempArmazenamento.getTemperatura();    // Obtém a temperatura
 
-    //ntu.getTurbidez();
+    ntu.getTurbidez();
 
-    delay(500);
+    delay(1000);
 
 }

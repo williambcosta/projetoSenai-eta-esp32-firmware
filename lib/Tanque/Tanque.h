@@ -19,7 +19,6 @@ class Tanque {
     uint8_t pinoNivelAlto;
     uint8_t pinoNivelBaixo;
 
-    // TODO: Implementar o sensor de PH
     float ph; 
 
    public:
