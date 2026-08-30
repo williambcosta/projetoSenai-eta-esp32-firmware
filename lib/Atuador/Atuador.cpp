@@ -10,8 +10,7 @@ Atuador::Atuador(uint8_t pinoAtuador) {
     pinMode(pino, OUTPUT);
 }
 
-Atuador::Atuador(uint8_t pinoAtuador, uint8_t nivelAtuacao) {
-    Atuador(pinoAtuador);
+Atuador::Atuador(uint8_t pinoAtuador, uint8_t nivelAtuacao) : pino(pinoAtuador) {
     this->nivelAtuacao = nivelAtuacao;
 }
 

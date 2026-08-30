@@ -4,16 +4,14 @@
 
 #include "Tanque.h"
 
-Tanque::Tanque(uint8_t pinoTemp, uint8_t pinoPH, uint8_t pinoTurbidez, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo, const std::vector<Atuador>& atuadores) {
-    Tanque();
-
+Tanque::Tanque(SensorTemperatura& sensorTemp, uint8_t pinoPH, SensorTurbidez& sensorTurbidez, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo, const std::vector<Atuador>& atuadores) {
     // Inicializa os membros da classe
     this->pinoNivelAlto = pinoNivelAlto;
     this->pinoNivelBaixo = pinoNivelBaixo;
     this->atuadores = atuadores;
 
-    temperatura = SensorTemperatura(pinoTemp);
-    turbidez = SensorTurbidez(pinoTurbidez);
+    temperatura = sensorTemp;
+    turbidez = sensorTurbidez;
 
     // Configura os pinos de nível como pull-down. Caso acionados o nível lógico será LOW.
     pinMode(this->pinoNivelAlto, INPUT_PULLUP);

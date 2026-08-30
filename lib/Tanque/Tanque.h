@@ -11,24 +11,18 @@
 
 class Tanque {
    private:
-    SensorTemperatura temperatura;
-    SensorTurbidez turbidez;
+    SensorTemperatura& temperatura;
+    SensorTurbidez& turbidez;
 
     std::vector<Atuador> atuadores;
 
-    uint8_t pinoNivelAlto;
-    uint8_t pinoNivelBaixo;
+    uint8_t pinoNivelAlto = 13;
+    uint8_t pinoNivelBaixo = 14;
 
-    float ph; 
+    float ph = 7.0f; 
 
    public:
-    Tanque() {
-        ph = 7.0;
-        pinoNivelAlto = 0;
-        pinoNivelBaixo = 0;
-        atuadores.reserve(1);
-    };
-    Tanque(uint8_t pinoTemp, uint8_t pinoPH, uint8_t pinoTurbidez, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo, const std::vector<Atuador>& atuadores);
+    Tanque(SensorTemperatura& sensorTemp, uint8_t pinoPH, SensorTurbidez& sensorTurbidez, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo, const std::vector<Atuador>& atuadores);
 
     float getTemperatura();  // Função que retornan a temperatura da água do tanque em C°
     float getTurbidez();     // Função que retorna a turbidez da água do tanque em NTU (Nephelometric Turbidity Units)

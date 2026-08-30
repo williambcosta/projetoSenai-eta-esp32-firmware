@@ -14,11 +14,6 @@ class SensorTemperatura {
     float temperatura = -999.9;  // Inicia com valor padrão.
 
    public:
-    SensorTemperatura() {
-        oneWire = OneWire(4);
-        sensor = DallasTemperature(&oneWire);
-        sensor.begin();
-    };
     SensorTemperatura(uint8_t pinoOneWire);
     float getTemperatura();
 };
