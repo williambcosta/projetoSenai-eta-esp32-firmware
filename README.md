@@ -32,3 +32,12 @@ O firmware é responsável por automatizar a maquete física da Estação de Tra
 ```text
 [ Sensores/Atuadores ] ──(Pinos GPIO)──> [ ESP32 ] ──(Wi-Fi)──> [ HiveMQ Cloud ] ──> [ Dashboard Web Vue.js ]
 ```
+
+## Próximos Passos
+- [x] Configuração inicial do projeto
+- [ ] Criação de Classes para os sensores
+    - [X] SensorTurbidez
+    - [X] PH
+    - [X] Temperatura
+- [x] Criação de Classes para atuadores
+- [ ] Desenvolvimento inicial do fluxo do processo
