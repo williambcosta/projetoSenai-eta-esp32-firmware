@@ -1,5 +1,6 @@
 /* ----- BIBLIOTECAS ----- */
 #include <Arduino.h>
+#include <WiFi.h>
 
 #include "SensorTemperatura.h"
 #include "SensorTurbidez.h"
