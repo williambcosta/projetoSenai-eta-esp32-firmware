@@ -17,7 +17,7 @@
 
 #include "SensorPH.h"
 
-PH::PH(uint8_t pinoPH, float fatorConversao, float tensaoPhNeutro) {
+SensorPH::SensorPH(uint8_t pinoPH, float fatorConversao, float tensaoPhNeutro) {
     this->pinoPH = pinoPH;
     this->tensaoPhNeutro = tensaoPhNeutro;
     this->fatorConversao = fatorConversao;
@@ -26,7 +26,7 @@ PH::PH(uint8_t pinoPH, float fatorConversao, float tensaoPhNeutro) {
 }
 
 // Calcula o valor de ph tendo como base o valor retornado pelo sensor
-void PH::calculaPH() {
+void SensorPH::calculaPH() {
     float tensaoRecebida = 0.0f;  // Varrável auxiliar que armazena a tensão rebebida no pino do esp32
     float somatoria = 0.0f;       // Variável auxiliar que armazena a somatória de tensões para uma posteriormente calcular a média
 
@@ -46,18 +46,18 @@ void PH::calculaPH() {
 }
 
 // Retorna o valor de PH calculado
-float PH::getPH() {
+float SensorPH::getPH() {
     calculaPH();
 
     return ph;
 }
 
 // Determina a tensão de referencia para PH 7 após a calibração
-void PH::setFatorConversao(float fatorConversao) {
+void SensorPH::setFatorConversao(float fatorConversao) {
     this->fatorConversao = fatorConversao;
 }
 
 // Determina a o fator de conversão calculado com a formula fC = (pH4 - pH7) / (VpH4 - VpH7)
-void PH::setTensaoPhNeutro(float tensaoPhNeutro) {
+void SensorPH::setTensaoPhNeutro(float tensaoPhNeutro) {
     this->fatorConversao = fatorConversao;
 }

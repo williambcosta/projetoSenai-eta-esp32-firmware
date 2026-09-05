@@ -1,9 +1,9 @@
-#ifndef PH_H
-#define PH_H
+#ifndef SENSOR_PH_H
+#define SENSOR_PH_H
 
 #include <Arduino.h>
 
-class PH {
+class SensorPH {
    private:
     uint8_t pinoPH = 16;      // Pino do sensor
     uint16_t amostras = 100;  // Variável auxiliar para leitura do sensor. Indica quantas vezes ele será lido
@@ -22,7 +22,7 @@ class PH {
     void calculaPH();  // Calcula o valor de ph tendo como base o valor retornado pelo sensor
 
    public:
-    PH(uint8_t pinoPH, float fatorConversao, float tensaoPhNeutro);
+    SensorPH(uint8_t pinoPH, float fatorConversao, float tensaoPhNeutro);
 
     float getPH();  // Retorna o valor de PH calculado
 

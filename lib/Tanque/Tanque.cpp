@@ -29,9 +29,8 @@ float Tanque::getTurbidez() {
 }
 
 // Função que retorna o ph da água do tanque
-// TODO: Implementar a leitura do pH do tanque, utilizando o pino de pH fornecido no construtor da classe Tanque.
 float Tanque::getPH() {
-    return ph;
+    return ph.getPH();
 }
 
 // Função que indica se o nível da água do tanque está alto

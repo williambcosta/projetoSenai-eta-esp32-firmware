@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "Atuador.h"
+#include "SensorPH.h"
 #include "SensorTemperatura.h"
 #include "SensorTurbidez.h"
 
@@ -13,13 +14,12 @@ class Tanque {
    private:
     SensorTemperatura& temperatura;
     SensorTurbidez& turbidez;
+    SensorPH& ph;
 
     std::vector<Atuador> atuadores;
 
     uint8_t pinoNivelAlto = 13;
     uint8_t pinoNivelBaixo = 14;
-
-    float ph = 7.0f; 
 
    public:
     Tanque(SensorTemperatura& sensorTemp, uint8_t pinoPH, SensorTurbidez& sensorTurbidez, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo, const std::vector<Atuador>& atuadores);
