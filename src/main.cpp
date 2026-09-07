@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 
+#include "MqttManager.h"
 #include "SensorTemperatura.h"
 #include "SensorTurbidez.h"
 
@@ -57,7 +58,8 @@
 // SensorTemperatura tempTrat = SensorTemperatura(PIN_TEMP_TRAT);                // Sensor de temperatura da água em tratamento
 // SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);              // Sensor de temperatura da água final
 
-SensorTurbidez ntu = SensorTurbidez(PIN_TBDZ_AGUA_BRUTA, 500, 2.0f, 0.0f);
+// SensorTurbidez ntu = SensorTurbidez(PIN_TBDZ_AGUA_BRUTA, 500, 2.0f, 0.0f);
+MqttManager mqtt = MqttManager("Willian", "#Ws120912", "90d42cec75d14181b23673d72f964713.s1.eu.hivemq.cloud", 8883, "espclient", "esp12345");
 
 /* ----- Configuração inicial ----- */
 void setup() {
@@ -93,11 +95,16 @@ void setup() {
     */
 
     Serial.begin(115200);  // Inicializa a comunicação serial com o computador
+
+    mqtt.begin("espclient_Comandos", "espclient_Dados");
+
 }
 
 /* ----- Loop principal ----- */
 void loop() {
-    ntu.getTurbidez();
-
     delay(1000);
+
+    mqtt.handle();
+
+    mqtt.publish(String(random(20, 35)).c_str());
 }

@@ -1,89 +1,55 @@
-extern "C" {
-	#include "freertos/FreeRTOS.h"
-	#include "freertos/timers.h"
-}
+/**
+ * Classe para gerenciar a comunicação MQTT com o HiveMq Cloud, incluindo conexão Wi-Fi, publicação e assinatura de tópicos.
+ *
+ * Deve ser configurada informando rede wifi a ser conectado, senha da rede, servidor mqtt, porta, usuário mqtt, senha e o método hundle deve ser
+ * chamado na função loop pois a mesma é responsável por verificar a chegada de novas mensagens vindas do servidor.
+ */
 
-#include <AsyncMqttClient.h>
+#ifndef MQTT_MANAGER_H
+#define MQTT_MANAGER_H
 
-#include "WifiManager.h"
+#include <PubSubClient.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
 
-#define MQTT_URL "90d42cec75d14181b23673d72f964713.s1.eu.hivemq.cloud"
-#define MQTT_PORT 8883
+class MqttManager {
+   private:
+    const char* wifi_ssid;             // SSID da rede Wi-Fi
+    const char* wifi_senha;            // Senha da rede Wi-Fi
+    const char* mqtt_servidor;         // Endereço do servidor MQTT
+    int mqtt_porta;                    // Porta do servidor MQTT
+    const char* mqtt_usuario;          // Nome de usuário para autenticação MQTT
+    const char* mqtt_senha;            // Senha para autenticação MQTT
+    const char* mqtt_topico_dados;     // Tópico para publicar dados. É como um filtro de mensagems
+    const char* mqtt_topico_comandos;  // Tópico para receber dados.
 
-AsyncMqttClient mqttClient;
-TimerHandle_t mqttReconnectTimer;
-TimerHandle_t wifiReconnectTimer;
-WifiManager wifi;
+    WiFiClientSecure espClient;  // Cliente seguro para comunicação MQTT
+    PubSubClient client;         // Cliente MQTT
 
-void connectToMqtt() {
-  Serial.println("Connecting to MQTT...");
-  mqttClient.connect();
-}
+    String ultimaMsg = "";  // Armazena a última mensagem recebida. Usar com cautela, pois só é atualizado com uma nova mensagem.
 
-void onMqttConnect(bool sessionPresent) {
-  Serial.println("Connected to MQTT.");
-  Serial.print("Session present: ");
-  Serial.println(sessionPresent);
-  uint16_t packetIdSub = mqttClient.subscribe("test/lol", 2);
-  Serial.print("Subscribing at QoS 2, packetId: ");
-  Serial.println(packetIdSub);
-  mqttClient.publish("test/lol", 0, true, "test 1");
-  Serial.println("Publishing at QoS 0");
-  uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
-  Serial.print("Publishing at QoS 1, packetId: ");
-  Serial.println(packetIdPub1);
-  uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, "test 3");
-  Serial.print("Publishing at QoS 2, packetId: ");
-  Serial.println(packetIdPub2);
-}
+    static MqttManager* _instance;  // Ponteiro estático para armazenar a instância atual da classe
 
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
-  Serial.println("Disconnected from MQTT.");
+    void setupWifi();  // Função para configurar a conexão Wi-Fi
+    void reconnect();  // Função para reconectar ao servidor MQTT caso a conexão seja perdida
 
-  if (WiFi.isConnected()) {
-    xTimerStart(mqttReconnectTimer, 0);
-  }
-}
+    // Função que processa a mensagem recebida
+    void handleMsg(char* topico, byte* payload, unsigned int tamanho);
 
+    // Callback estático que será usado pela PubSubClient
+    static void mqttCallback(char* topico, byte* payload, unsigned int tamanho);
 
-void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
-  Serial.println("Subscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-  Serial.print("  qos: ");
-  Serial.println(qos);
-}
+   public:
+    MqttManager(const char* ssid, const char* wifiSenha, const char* servidor, int porta, const char* usuario, const char* usuarioSenha);
 
-void onMqttUnsubscribe(uint16_t packetId) {
-  Serial.println("Unsubscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-}
+    void begin(const char* topicoComandos = nullptr, const char* topicoDados = nullptr);   // Inicializa a conexão Wi-Fi e configura o cliente MQTT, opcionalmente assinando um tópico de comandos
+    void handle();                                                                         // Função responsável por chamar o loop do cliente MQTT e manter a conexão ativa
+    bool publish(const char* payload);                                                     // Função para publicar mensagens em um tópico específico
 
-void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-  Serial.println("Publish received.");
-  Serial.print("  topic: ");
-  Serial.println(topic);
-  Serial.print("  qos: ");
-  Serial.println(properties.qos);
-  Serial.print("  dup: ");
-  Serial.println(properties.dup);
-  Serial.print("  retain: ");
-  Serial.println(properties.retain);
-  Serial.print("  len: ");
-  Serial.println(len);
-  Serial.print("  index: ");
-  Serial.println(index);
-  Serial.print("  total: ");
-  Serial.println(total);
-}
+    String getUltimaMsg() const { return ultimaMsg; }  // Retorna a última mensagem recebida
 
-void onMqttPublish(uint16_t packetId) {
-  Serial.println("Publish acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-}
+    void setTopicoDados(const char* topico) { mqtt_topico_dados = topico; }        // Define o tópico para publicar os dados
+    void setTopicoComandos(const char* topico) { mqtt_topico_comandos = topico; }  // Define o tópico para receber dados
+};
 
-
-// TODO: Isolar em classes MqttManager e WifiManager
-// TODO: Criar a implementação das classes
+#endif
