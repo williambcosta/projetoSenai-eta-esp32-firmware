@@ -1,8 +1,13 @@
 /*
  * Classe responsável por ler e calcular a turbidez da água em NTU (Nephelometric Turbidity Units) a partir de um sensor de turbidez conectado ao ESP32.
  *
- * O valor NTU é calculado a partir da tensão obtida segindo a formula: NTU = -1120.4 * (tensão^2) + 5742.3 * tensão - 4352.9,
+ * O valor NTU é calculado a partir da tensão obtida segindo a formula: NTU = 1000 - (tensão * fatorConversão),
  * onde a tensão é a média das leituras do sensor. Essa média auxilia na eliminação de ruidos, garantindo uma medição mais precisa e confiável.
+ * 
+ * O fator de conversão é o valor usado para converter a tensão obtida em um valor de NTU e segue a formula 
+ * fatorConversão = 1000  / (tensão máxima - tensão minima), onde 1000 é o NTU máximo nominal do sensor KIE-TS300B
+ * tensão máxima é o valor de tensão enviado pelo sensor quando em água limpa e
+ * tensão mínima é o valor de tensão enviado pelo sensor quando o mesmo estiver totalmente bloqueado 
  *
  * É necessário medir os valores máximo e minimo que o sensor envia, pois o sensor pode enviar várias faixas de tensão.
  * Para isso basta medir o valor enviado com o sensor sem obstrução nenhuma (o que indica água limpa), esse valor será
