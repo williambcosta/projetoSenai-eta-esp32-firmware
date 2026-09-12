@@ -18,46 +18,45 @@
 #include "SensorPH.h"
 
 SensorPH::SensorPH(uint8_t pinoPH, float fatorConversao, float tensaoPhNeutro) {
-    this->pinoPH = pinoPH;
-    this->tensaoPhNeutro = tensaoPhNeutro;
-    this->fatorConversao = fatorConversao;
+  this->pinoPH = pinoPH;
+  this->tensaoPhNeutro = tensaoPhNeutro;
+  this->fatorConversao = fatorConversao;
 
-    offset = 7.0f - (tensaoPhNeutro * fatorConversao);
+  offset = 7.0f - (tensaoPhNeutro * fatorConversao);
 }
 
 // Calcula o valor de ph tendo como base o valor retornado pelo sensor
 void SensorPH::calculaPH() {
-    float tensaoRecebida = 0.0f;  // Varrável auxiliar que armazena a tensão rebebida no pino do esp32
-    float somatoria = 0.0f;       // Variável auxiliar que armazena a somatória de tensões para uma posteriormente calcular a média
+  float tensaoRecebida = 0.0f;  // Varrável auxiliar que armazena a tensão rebebida no pino do esp32
+  float somatoria = 0.0f;       // Variável auxiliar que armazena a somatória de tensões para uma posteriormente calcular a média
 
-    // Realiza várias leituras do sensor, somando os resultados, para estimar a média posteriormente.
-    // Isso ajuda a reduzir o ruído e obter uma leitura mais precisa.
-    for (uint16_t i = 0; i < amostras; i++) {
-        tensaoRecebida = (((float)analogRead(pinoPH) * 3.3f) / 4095.0f);  // Valor lido no pino do ESP32, convertido em V
+  // Realiza várias leituras do sensor, somando os resultados, para estimar a média posteriormente.
+  // Isso ajuda a reduzir o ruído e obter uma leitura mais precisa.
+  for (uint16_t i = 0; i < amostras; i++) {
+    tensaoRecebida = (((float)analogRead(pinoPH) * 3.3f) / 4095.0f);  // Valor lido no pino do ESP32, convertido em V
 
-        somatoria += tensaoRecebida;  // Soma a tensão atual ao total
-        delay(2);                     // Pequena pausa entre as leituras para estabilizar o sensor.
-    }
+    somatoria += tensaoRecebida;  // Soma a tensão atual ao total
+    delay(2);                     // Pequena pausa entre as leituras para estabilizar o sensor.
+  }
 
-    // Realiza a média entre os valores lidos
-    float leituraMedia = somatoria / amostras;
+  float leituraMedia = somatoria / amostras;  // Realiza a média entre os valores lidos
 
-    ph = (leituraMedia * fatorConversao) + offset;  // Converte a tensão para pH
+  ph = (leituraMedia * fatorConversao) + offset;  // Converte a tensão para pH
 }
 
 // Retorna o valor de PH calculado
 float SensorPH::getPH() {
-    calculaPH();
+  calculaPH();
 
-    return ph;
+  return ph;
 }
 
 // Determina a tensão de referencia para PH 7 após a calibração
 void SensorPH::setFatorConversao(float fatorConversao) {
-    this->fatorConversao = fatorConversao;
+  this->fatorConversao = fatorConversao;
 }
 
 // Determina a o fator de conversão calculado com a formula fC = (pH4 - pH7) / (VpH4 - VpH7)
 void SensorPH::setTensaoPhNeutro(float tensaoPhNeutro) {
-    this->fatorConversao = fatorConversao;
+  this->fatorConversao = fatorConversao;
 }

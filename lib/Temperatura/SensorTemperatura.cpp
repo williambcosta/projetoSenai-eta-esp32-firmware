@@ -17,20 +17,20 @@
 
 // Construtor do objeto. Configura e inicia a comunicação com o sensor.
 SensorTemperatura::SensorTemperatura(uint8_t pinoOneWire) {
-    oneWire = OneWire(pinoOneWire);
-    sensor = DallasTemperature(&oneWire);
-    sensor.begin();
+  oneWire = OneWire(pinoOneWire);
+  sensor = DallasTemperature(&oneWire);
+  sensor.begin();
 }
 
 // Retorna a temperatura em  graus Celsios
 float SensorTemperatura::getTemperatura() {
-    sensor.requestTemperatures();
+  sensor.requestTemperatures();
 
-    if (sensor.getAddress(enderecoSensor, 0)) {         // Caso exista algum sensor conectado
-        temperatura = sensor.getTempC(enderecoSensor);  // Atualiza o valor da temperatura
-    } else {
-        temperatura = -999.9;  // Caso não exista sensor conectado, retorna valor padrão.
-    }
+  if (sensor.getAddress(enderecoSensor, 0)) {       // Caso exista algum sensor conectado
+    temperatura = sensor.getTempC(enderecoSensor);  // Atualiza o valor da temperatura
+  } else {
+    temperatura = -999.9;  // Caso não exista sensor conectado, retorna valor padrão.
+  }
 
-    return temperatura;
+  return temperatura;
 }

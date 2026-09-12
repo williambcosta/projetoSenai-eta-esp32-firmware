@@ -6,16 +6,16 @@
 #include <OneWire.h>
 
 class SensorTemperatura {
-   private:
-    OneWire oneWire;
-    DallasTemperature sensor;
-    DeviceAddress enderecoSensor = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+ private:
+  OneWire oneWire;
+  DallasTemperature sensor;
+  DeviceAddress enderecoSensor = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-    float temperatura = -999.9;  // Inicia com valor padrão.
+  float temperatura = -999.9;  // Inicia com valor padrão.
 
-   public:
-    SensorTemperatura(uint8_t pinoOneWire);
-    float getTemperatura();
+ public:
+  SensorTemperatura(uint8_t pinoOneWire);
+  float getTemperatura();
 };
 
 #endif
