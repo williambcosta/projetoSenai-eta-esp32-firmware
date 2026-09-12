@@ -34,10 +34,13 @@ O firmware é responsável por automatizar a maquete física da Estação de Tra
 ```
 
 ## Próximos Passos
-- [x] Configuração inicial do projeto
-- [ ] Criação de Classes para os sensores
+- [X] Configuração inicial do projeto
+- [X] Criação de Classes para os sensores
     - [X] SensorTurbidez
+        - [X] Calibração
     - [X] PH
+         - [ ] Calibração
     - [X] Temperatura
-- [x] Criação de Classes para atuadores
+- [X] Criação de Classes para atuadores
+    - [ ] Adicionar temporização
 - [ ] Desenvolvimento inicial do fluxo do processo

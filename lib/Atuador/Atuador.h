@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 
+// TODO: Adicionar temporização para permanecer ligado por x tempo e desligar após x tempo
 class Atuador {
  private:
   bool estado = false;  // Armazena o estado do atuador. TRUE = ligado, FALSE = desligado
