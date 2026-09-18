@@ -4,90 +4,100 @@
 #include "SensorPH.h"
 #include "SensorTemperatura.h"
 #include "SensorTurbidez.h"
+#include "Tanque.h"
 
 /* ----- DEFINICÕES ----- */
+/* ----- Entradas Analógicas ----- */
+// Sensores de turbidez
+#define PIN_TBDZ_ATIVOS 33  // Pino do sensor de turbidez da água tratada
+#define PIN_TBDZ_FINAL 34   // Pino do sensor de turbidez da água final
 
-// // Sensores de temperatura
-// #define PIN_TEMP_AGUA_BRUTA 34   // Pino do sensor de temperatura da água bruta
-// #define PIN_TEMP_TRAT 35        // Pino do sensor de temperatura da água tratada
-// #define PIN_TEMP_FINAL 36       // Pino do sensor de temperatura da água final
+// Sensores de pH
+#define PIN_PH_ATIVOS 36  // Pino do sensor de pH da água tratada
+#define PIN_PH_FINAL 39   // Pino do sensor de pH da água final
 
-// // Sensores de turbidez
-// #define PIN_TBDZ_AGUA_BRUTA 13   // Pino do sensor de turbidez da água bruta
-// #define PIN_TBDZ_TRAT          // Pino do sensor de turbidez da água tratada
-// #define PIN_TBDZ_FINAL 14        // Pino do sensor de turbidez da água final
+/* ----- Entradas Digitais ----- */
+// Sensores de temperatura
+#define PIN_TEMP_ATIVOS 13  // Pino do sensor de temperatura da água tratada
+#define PIN_TEMP_FINAL 14   // Pino do sensor de temperatura da água final
 
-// // Sensores de pH
-// #define PIN_PH_AGUA_BRUTA     // Pino do sensor de pH da água bruta
-// #define PIN_PH_TRAT 27        // Pino do sensor de pH da água tratada
-// #define PIN_PH_FINAL 26       // Pino do sensor de pH da água final
+// Sensores de nível
+#define PIN_SNA_ARMAZENAMENTO 16  // Pino do sensor de nível alto tanque água bruta
+#define PIN_SNB_ARMAZENAMENTO 17  // Pino do sensor de nível baixo tanque água bruta
+#define PIN_SNA_ATIVOS 18         // Pino do sensor de nível alto tanque ativos
+#define PIN_SNB_ATIVOS 19         // Pino do sensor de nível baixo tanque ativos
+#define PIN_SNA_FINAL 21          // Pino do sensor de nível alto tanque final
+#define PIN_SNB_FINAL 22          // Pino do sensor de nível baixo tanque final
+#define PIN_SNA_EFLU 23           // Pino do sensor de nível alto tanque efluente
+#define PIN_SNB_EFLU 4            // Pino do sensor de nível baixo tanque efluente
 
-// // Sensores de nível
-// #define PIN_SNA_AGUA_BRUTA 16  // Pino do sensor de nível alto tanque água bruta
-// #define PIN_SNB_AGUA_BRUTA 17  // Pino do sensor de nível baixo tanque água bruta
-// #define PIN_SNA_ATIV 18        // Pino do sensor de nível alto tanque ativos
-// #define PIN_SNB_ATIV 19        // Pino do sensor de nível baixo tanque ativos
-// #define PIN_SNA_FINAL 21       // Pino do sensor de nível alto tanque final
-// #define PIN_SNB_FINAL 22       // Pino do sensor de nível baixo tanque final
-// #define PIN_SNA_EFLU  23       // Pino do sensor de nível alto tanque efluente
-// #define PIN_SNB_EFLU  25       // Pino do sensor de nível baixo tanque efluente
+/* ----- Saídas Digitais ----- */
+// Comunicação 74HC595
+#define CLK 25    // Clock do registrador de deslocamento. Cada pulso nesse pino lê o bit que está na entrada DS e o desloca internamente.
+#define LATCH 26  // Clock de armazenamento ou Latch. Storage Register Clock. Um pulso aqui transfere os dados armazenados internamente para os pinos de saída (Q0–Q7) de uma só vez
+#define DADOS 27  // Entrada de dados serial. É por onde os bits entram no chip, um de cada vez.
 
-// // Bombas de transferência
-// #define PIN_BOMBA_PM1 26  // Pino da bomba de transferência para tanque de ativos
-// #define PIN_BOMBA_PM2 27  // Pino da bomba de transferência para final/efluentes
-// #define PIN_BOMBA_PM3 32  // Pino da bomba de retorno para tanque de armazenamento
+// Bombas de transferência
+#define PIN_BOMBA_PM1 "Q0.0"  // Pino da bomba de transferência para tanque de ativos
+#define PIN_BOMBA_PM2 "Q0.1"  // Pino da bomba de transferência para final/efluentes
+#define PIN_BOMBA_PM3 "Q0.2"  // Pino da bomba de retorno para tanque de armazenamento
 
-// // Solenoides
-// #define PIN_SOL_EFLU 34   // Pino da solenoide de controle de fluxo para o tanque de efluentes
-// #define PIN_SOL_FINAL 4  // Pino da solenoide de controle de fluxo para o tanque final
+// Solenoides
+#define PIN_SOL_EFLU "Q0.3"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
+#define PIN_SOL_FINAL "Q0.4"  // Pino da solenoide de controle de fluxo para o tanque final
 
-// // Misturadores
-// #define PIN_RM1_ATIV    // Pino do misturador do tanque de ativos
-// #define PIN_RM2_FINAL   // Pino do misturador do tanque final
+// Misturadores
+#define PIN_RM1_ATIV "Q0.5"   // Pino do misturador do tanque de ativos
+#define PIN_RM2_FINAL "Q0.6"  // Pino do misturador do tanque final
 
-// // Dosadores
-// // #define PIN_DOSADOR_CLORETO       // Pino do dosador de cloreto
-// // #define PIN_DOSADOR_CARBONATO     // Pino do dosador de carbonato
-// // #define PIN_DOSADOR_HIPOCLORITO   // Pino do dosador de hipoclorito
+// Dosadores
+#define PIN_DOSADOR_CLORETO "Q0.7"      // Pino do dosador de cloreto
+#define PIN_DOSADOR_CARBONATO "Q1.0"    // Pino do dosador de carbonato
+#define PIN_DOSADOR_HIPOCLORITO "Q1.1"  // Pino do dosador de hipoclorito
 
-// // Lâmpadas
-// #define PIN_LAMPADA_UV   // Pino da lâmpada UV
+// Lâmpadas
+#define PIN_LAMPADA_UV "Q1.2"  // Pino da lâmpada UV
 
 // Instancias dos sensores de temperatura
-// SensorTemperatura tempArmazenamento = SensorTemperatura(PIN_TEMP_AGUA_BRUTA); // Sensor de temperatura da água bruta
-// SensorTemperatura tempTrat = SensorTemperatura(PIN_TEMP_TRAT);                // Sensor de temperatura da água em tratamento
-// SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);              // Sensor de temperatura da água final
+SensorTemperatura tempAtiv = SensorTemperatura(PIN_TEMP_ATIVOS);  // Sensor de temperatura da água em tratamento
+SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);  // Sensor de temperatura da água final
 
-// SensorTurbidez ntu = SensorTurbidez(PIN_TBDZ_AGUA_BRUTA, 500, 2.0f, 0.0f);
+// Instancias dos sensores de turbidez
+SensorTurbidez ntuAtiv = SensorTurbidez(PIN_TBDZ_ATIVOS, 250, 2.0f, 0.0f);
+SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 250, 2.0f, 0.0f);
 
-SensorPH ph = SensorPH(35);  // Sensor de pH da água bruta
+// Instancias dos sensores de ph
+SensorPH phAtivos = SensorPH(PIN_PH_ATIVOS);  // Sensor de pH da água bruta
+SensorPH phFinal = SensorPH(PIN_PH_FINAL);    // Sensor de pH da água final
+
+// TODO: Colocar as saidas
+std::vector<Atuador> am;
 
 /* ----- Configuração inicial ----- */
 void setup() {
-  /*
+  // TODO: Push de todas as saidas digitais
+  //am.push_back(Atuador(PIN_BOMBA_PM1));
+
+  // Tanque tqArmazenamento = Tanque(SensorTemperatura(PIN_TEMP_ATIVOS), SensorPH(PIN_PH_ATIVOS),
+  //                                 SensorTurbidez(PIN_TBDZ_ATIVOS, 250, 2.0f, 0.0f), am, PIN_SNA_ARMAZENAMENTO, PIN_SNB_ARMAZENAMENTO);
+  delay(1000);  // Aguarda 1 segundo para garantir que o sistema esteja estável antes de iniciar a configuração
+
   // TODO: Criar instancias dos tanques
+
   // Define os pinos dos sensores de nível como entrada
-  pinMode(PIN_SNA_AGUA_BRUTA, INPUT_PULLDOWN);
-  pinMode(PIN_SNB_AGUA_BRUTA, INPUT_PULLDOWN);
-  pinMode(PIN_SNA_TRAT, INPUT_PULLDOWN);
-  pinMode(PIN_SNB_TRAT, INPUT_PULLDOWN);
-  pinMode(PIN_SNA_FINAL, INPUT_PULLDOWN);
-  pinMode(PIN_SNB_FINAL, INPUT_PULLDOWN);
-  pinMode(PIN_SNA_EFLU, INPUT_PULLDOWN);
-  pinMode(PIN_SNB_EFLU, INPUT_PULLDOWN);
-  // Define os pinos dos atuadores como saída
-  pinMode(PIN_BOMBA_PE, OUTPUT);
-  pinMode(PIN_BOMBA_PT, OUTPUT);
-  pinMode(PIN_BOMBA_PF, OUTPUT);
-  pinMode(PIN_BOMBA_RE, OUTPUT);
-  pinMode(PIN_MISTURADOR_TRAT, OUTPUT);
-  pinMode(PIN_MISTURADOR_FINAL, OUTPUT);
-  pinMode(PIN_DOSADOR_CLORETO, OUTPUT);
-  pinMode(PIN_DOSADOR_CARBONATO, OUTPUT);
-  pinMode(PIN_DOSADOR_HIPOCLORITO, OUTPUT);
-  pinMode(PIN_SOLENOIDE, OUTPUT);
-  pinMode(PIN_LAMPADA_UV, OUTPUT);
-  */
+  pinMode(PIN_SNA_ARMAZENAMENTO, INPUT_PULLUP);
+  pinMode(PIN_SNB_ARMAZENAMENTO, INPUT_PULLUP);
+  pinMode(PIN_SNA_ATIVOS, INPUT_PULLUP);
+  pinMode(PIN_SNB_ATIVOS, INPUT_PULLUP);
+  pinMode(PIN_SNA_FINAL, INPUT_PULLUP);
+  pinMode(PIN_SNB_FINAL, INPUT_PULLUP);
+  pinMode(PIN_SNA_EFLU, INPUT_PULLUP);
+  pinMode(PIN_SNB_EFLU, INPUT_PULLUP);
+
+  // Define os pinos de comuniação com o 74HC595 como saída
+  pinMode(CLK, OUTPUT);
+  pinMode(LATCH, OUTPUT);
+  pinMode(DADOS, OUTPUT);
 
   Serial.begin(115200);  // Inicializa a comunicação serial com o computador
 }
@@ -132,13 +142,10 @@ void loop() {
   // Se !Nível baixo && !Nível alto para RM2 e H1
 
   /* Efluentes */
-  // Quando nível alto && nivel baixo && (!Nível alto  && Nível baixo Armazenamento)
+  // Quando nível alto && (!Nível alto  && Nível baixo Armazenamento)
   // Aciona PM3
   // Se Armazenamento Nível alto || Efluentes Nível baixo
+  // Para PM3
 
   // ntu.getTurbidez();
-
-  Serial.print("Ph: ");
-  Serial.println(ph.getPH());
-  delay(500);
 }

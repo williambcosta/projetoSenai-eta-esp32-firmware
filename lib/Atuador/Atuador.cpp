@@ -8,6 +8,7 @@
 
 #include "Atuador.h"
 
+// TODO: Modificar considerando o CI
 Atuador::Atuador(uint8_t pinoAtuador) {
   this->pino = pinoAtuador;
 }
