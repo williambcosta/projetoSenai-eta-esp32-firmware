@@ -5,7 +5,7 @@
 #include "Tanque.h"
 // TODO: Refatorar. Criar uma classe mais simples e implementar herança dos tanques específicos
 Tanque::Tanque(SensorTemperatura& sensorTemp, SensorPH& sensorPH,
-               SensorTurbidez& sensorTurbidez, const std::vector<Atuador>& atuadores,
+               SensorTurbidez& sensorTurbidez, const std::vector<SaidaDigital>& atuadores,
                uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo)
     : temperatura(sensorTemp), ph(sensorPH), turbidez(sensorTurbidez), atuadores(atuadores) {
   // Inicializa os membros da classe

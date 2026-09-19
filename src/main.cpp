@@ -9,8 +9,8 @@
 /* ----- DEFINICÕES ----- */
 /* ----- Entradas Analógicas ----- */
 // Sensores de turbidez
-#define PIN_TBDZ_ATIVOS 33  // Pino do sensor de turbidez da água tratada
-#define PIN_TBDZ_FINAL 34   // Pino do sensor de turbidez da água final
+#define PIN_TBDZ_ATIVOS 34  // Pino do sensor de turbidez da água tratada
+#define PIN_TBDZ_FINAL 35   // Pino do sensor de turbidez da água final
 
 // Sensores de pH
 #define PIN_PH_ATIVOS 36  // Pino do sensor de pH da água tratada
@@ -18,18 +18,18 @@
 
 /* ----- Entradas Digitais ----- */
 // Sensores de temperatura
-#define PIN_TEMP_ATIVOS 13  // Pino do sensor de temperatura da água tratada
-#define PIN_TEMP_FINAL 14   // Pino do sensor de temperatura da água final
+#define PIN_TEMP_ATIVOS 4  // Pino do sensor de temperatura da água tratada
+#define PIN_TEMP_FINAL 13   // Pino do sensor de temperatura da água final
 
 // Sensores de nível
-#define PIN_SNA_ARMAZENAMENTO 16  // Pino do sensor de nível alto tanque água bruta
-#define PIN_SNB_ARMAZENAMENTO 17  // Pino do sensor de nível baixo tanque água bruta
-#define PIN_SNA_ATIVOS 18         // Pino do sensor de nível alto tanque ativos
-#define PIN_SNB_ATIVOS 19         // Pino do sensor de nível baixo tanque ativos
-#define PIN_SNA_FINAL 21          // Pino do sensor de nível alto tanque final
-#define PIN_SNB_FINAL 22          // Pino do sensor de nível baixo tanque final
-#define PIN_SNA_EFLU 23           // Pino do sensor de nível alto tanque efluente
-#define PIN_SNB_EFLU 4            // Pino do sensor de nível baixo tanque efluente
+#define PIN_SNA_ARMAZENAMENTO 14  // Pino do sensor de nível alto tanque água bruta
+#define PIN_SNB_ARMAZENAMENTO 16  // Pino do sensor de nível baixo tanque água bruta
+#define PIN_SNA_ATIVOS 17         // Pino do sensor de nível alto tanque ativos
+#define PIN_SNB_ATIVOS 18         // Pino do sensor de nível baixo tanque ativos
+#define PIN_SNA_FINAL 19          // Pino do sensor de nível alto tanque final
+#define PIN_SNB_FINAL 21          // Pino do sensor de nível baixo tanque final
+#define PIN_SNA_EFLU 22           // Pino do sensor de nível alto tanque efluente
+#define PIN_SNB_EFLU 23            // Pino do sensor de nível baixo tanque efluente
 
 /* ----- Saídas Digitais ----- */
 // Comunicação 74HC595
@@ -38,25 +38,25 @@
 #define DADOS 27  // Entrada de dados serial. É por onde os bits entram no chip, um de cada vez.
 
 // Bombas de transferência
-#define PIN_BOMBA_PM1 "Q0.0"  // Pino da bomba de transferência para tanque de ativos
-#define PIN_BOMBA_PM2 "Q0.1"  // Pino da bomba de transferência para final/efluentes
-#define PIN_BOMBA_PM3 "Q0.2"  // Pino da bomba de retorno para tanque de armazenamento
+#define PIN_BOMBA_PM1 "0.0"  // Pino da bomba de transferência para tanque de ativos
+#define PIN_BOMBA_PM2 "0.1"  // Pino da bomba de transferência para final/efluentes
+#define PIN_BOMBA_PM3 "0.2"  // Pino da bomba de retorno para tanque de armazenamento
 
 // Solenoides
-#define PIN_SOL_EFLU "Q0.3"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
-#define PIN_SOL_FINAL "Q0.4"  // Pino da solenoide de controle de fluxo para o tanque final
+#define PIN_SOL_EFLU "0.3"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
+#define PIN_SOL_FINAL "0.4"  // Pino da solenoide de controle de fluxo para o tanque final
 
 // Misturadores
-#define PIN_RM1_ATIV "Q0.5"   // Pino do misturador do tanque de ativos
-#define PIN_RM2_FINAL "Q0.6"  // Pino do misturador do tanque final
+#define PIN_RM1_ATIV "0.5"   // Pino do misturador do tanque de ativos
+#define PIN_RM2_FINAL "0.6"  // Pino do misturador do tanque final
 
 // Dosadores
-#define PIN_DOSADOR_CLORETO "Q0.7"      // Pino do dosador de cloreto
-#define PIN_DOSADOR_CARBONATO "Q1.0"    // Pino do dosador de carbonato
-#define PIN_DOSADOR_HIPOCLORITO "Q1.1"  // Pino do dosador de hipoclorito
+#define PIN_DOSADOR_CLORETO "0.7"      // Pino do dosador de cloreto
+#define PIN_DOSADOR_CARBONATO "1.0"    // Pino do dosador de carbonato
+#define PIN_DOSADOR_HIPOCLORITO "1.1"  // Pino do dosador de hipoclorito
 
 // Lâmpadas
-#define PIN_LAMPADA_UV "Q1.2"  // Pino da lâmpada UV
+#define PIN_LAMPADA_UV "1.2"  // Pino da lâmpada UV
 
 // Instancias dos sensores de temperatura
 SensorTemperatura tempAtiv = SensorTemperatura(PIN_TEMP_ATIVOS);  // Sensor de temperatura da água em tratamento
@@ -71,7 +71,7 @@ SensorPH phAtivos = SensorPH(PIN_PH_ATIVOS);  // Sensor de pH da água bruta
 SensorPH phFinal = SensorPH(PIN_PH_FINAL);    // Sensor de pH da água final
 
 // TODO: Colocar as saidas
-std::vector<Atuador> am;
+std::vector<SaidaDigital> am;
 
 /* ----- Configuração inicial ----- */
 void setup() {
