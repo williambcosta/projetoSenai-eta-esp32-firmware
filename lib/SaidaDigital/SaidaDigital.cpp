@@ -7,6 +7,8 @@
  * irá representar a posição dentro do registrador.
  * 
  * Utiliza o Singleton ShiftRegister para controlar o registrador de deslocamento.
+ * 
+ * É importante chamar a funcão loop passando millis() como parametro para que o tempo seja atualizado 
  *
  */
 
@@ -29,33 +31,33 @@ bool SaidaDigital::getStatus() {
 // Função responsável por ligar o SaidaDigital
 void SaidaDigital::liga(uint8_t byteSaida, uint8_t bitSaida) {
   if (nivelAtuacao == HIGH) {
-    shiftRegister.setSaida(byteSaida, bitSaida, HIGH);
+    ShiftRegister::Instance().setSaida(byteSaida, bitSaida, HIGH);
   } else {
-    shiftRegister.setSaida(byteSaida, bitSaida, LOW);
+    ShiftRegister::Instance().setSaida(byteSaida, bitSaida, LOW);
   }
 }
 
 // Função responsável por desligar o SaidaDigital
 void SaidaDigital::desliga(uint8_t byteSaida, uint8_t bitSaida) {
   if (nivelAtuacao == HIGH) {
-    shiftRegister.setSaida(byteSaida, bitSaida, LOW);
+    ShiftRegister::Instance().setSaida(byteSaida, bitSaida, LOW);
   } else {
-    shiftRegister.setSaida(byteSaida, bitSaida, HIGH);
+    ShiftRegister::Instance().setSaida(byteSaida, bitSaida, HIGH);
   }
 }
 
 // TODO: Finalizar a implementação das funções desligaApos, loop e begin
+// TODO: Na verdade não vou fazer mais. Vai aumentar muito a complexidade, não tenho tempo pra isso agora
+/*
 // Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
 void SaidaDigital::desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minutos) {
+  liga(byteSaida, bitSaida);
 }
 
 // Função responsável por desligar a saída após o tempo determinado em segundos. O valor será limitado a 15300 segundos
 void SaidaDigital::desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos) {
 }
-
-// Função que deve ser chamada no loop principal para verificar se a saída deve ser desligada após o tempo determinado
-void SaidaDigital::loop(unsigned long currentTime) {
-}
+*/
 
 // Funcão responsável por configurar o pino de saida do SaidaDigital
 void SaidaDigital::begin() {
