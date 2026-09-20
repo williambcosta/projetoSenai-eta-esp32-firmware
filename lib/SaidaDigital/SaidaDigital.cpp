@@ -14,6 +14,15 @@
 
 #include "SaidaDigital.h"
 
+SaidaDigital::SaidaDigital(std::string saida) {
+  this->byteSaida = saida[0] - '0';           // Converte o caractere do byte para um índice numérico
+  this->bitSaida = saida[2] - '0';            // Converte o caractere do bit para um índice numérico
+}
+
+SaidaDigital::SaidaDigital(std::string saida, uint8_t nivelAtuacao) : SaidaDigital(saida) {
+  this->nivelAtuacao = nivelAtuacao;
+}
+
 SaidaDigital::SaidaDigital(uint8_t byteSaida, uint8_t bitSaida) {
   this->byteSaida = byteSaida;
   this->bitSaida = bitSaida;
@@ -46,7 +55,7 @@ void SaidaDigital::desliga() {
   }
 }
 
-// TODO: Finalizar a implementação das funções desligaApos, loop e begin
+// TODO: Finalizar a implementação das funções desligaApos
 // TODO: Na verdade não vou fazer mais. Vai aumentar muito a complexidade, não tenho tempo pra isso agora
 /*
 // Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
@@ -58,7 +67,3 @@ void SaidaDigital::desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minu
 void SaidaDigital::desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos) {
 }
 */
-
-// Funcão responsável por configurar o pino de saida do SaidaDigital
-void SaidaDigital::begin() {
-}

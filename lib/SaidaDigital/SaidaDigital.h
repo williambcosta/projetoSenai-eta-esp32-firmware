@@ -25,6 +25,8 @@ class SaidaDigital {
   // ShiftRegister& shiftRegister = ShiftRegister::Instance();  // Instancia do Singleton ShiftRegister para controlar o registrador de deslocamento
 
  public:
+  SaidaDigital(std::string saida);
+  SaidaDigital(std::string saida, uint8_t nivelAtuacao);
   SaidaDigital(uint8_t byteSaida, uint8_t bitSaida);
   SaidaDigital(uint8_t byteSaida, uint8_t bitSaida, uint8_t nivelAtuacao);
 
@@ -34,7 +36,6 @@ class SaidaDigital {
   void desliga();  // Função responsável por desligar o SaidaDigital
   // void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minutos);    // Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
   // void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos);  // Função responsável por desligar a saída após o tempo determinado em segundos. O valor será limitado a 15300 segundos
-  void begin();  // Funcão responsável por configurar o pino de saida do SaidaDigital
 };
 
 #endif

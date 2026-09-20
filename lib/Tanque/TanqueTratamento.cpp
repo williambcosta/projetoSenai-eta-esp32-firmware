@@ -8,7 +8,8 @@
 TanqueTratamento::TanqueTratamento(SensorTemperatura& sensorTemp, SensorPH& sensorPH,
                                    SensorTurbidez& sensorTurbidez, const std::vector<SaidaDigital>& atuadores,
                                    uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo)
-    : Tanque(atuadores, pinoNivelAlto, pinoNivelBaixo), temperatura(sensorTemp), turbidez(sensorTurbidez), ph(sensorPH) {
+    : Tanque(atuadores, pinoNivelAlto, pinoNivelBaixo), 
+      temperatura(sensorTemp), turbidez(sensorTurbidez), ph(sensorPH) {
 }
 
 // Função que retornan a temperatura da água do tanque em C°
