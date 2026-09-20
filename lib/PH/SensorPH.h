@@ -1,33 +1,29 @@
-#ifndef PH_H
-#define PH_H
+#ifndef SENSOR_PH_H
+#define SENSOR_PH_H
 
 #include <Arduino.h>
 
-class PH {
-   private:
-    uint8_t pinoPH = 16;      // Pino do sensor
-    uint16_t amostras = 100;  // Variável auxiliar para leitura do sensor. Indica quantas vezes ele será lido
+class SensorPH {
+ private:
+  uint8_t pinoPH = 16;      // Pino do sensor
+  uint16_t amostras = 100;  // Variável auxiliar para leitura do sensor. Indica quantas vezes ele será lido
 
-    float ph = 7.0f;              // O valor de ph calculado
-    float tensaoPhNeutro = 2.5f;  // Tensão obtida após a calibração do sensor. É utilizado para determinar o valor médio da escala de PH
-    float fatorConversao = 3.5f;  // Regra matemática que transforma a eletricidade medida no sensor em um valor de pH.
+  float ph = 7.0f;  // O valor de ph calculado
 
-    /*
-     * O OFFSET é calculado para garantir que a tensão de calibração corresponda a pH 7.
-     * A fórmula usada é: offset = pH_neutro - (tensaoCalibrada * fatorConversao)
-     * O fator de conversão padrão do sensor é 3.5, podendo variar
-     */
-    float offset;
+  float valorPhAcido = 4.0f;      // Valor de referência para solução tampão ácida.
+  float valorPhAlcalino = 10.0f;  // Valor de referência para solução tampão alcalino.
 
-    void calculaPH();  // Calcula o valor de ph tendo como base o valor retornado pelo sensor
+  float adcPhAcido = 3705.5f;     // Leitura analógica obtida após leitura de solução tampão acida.
+  float adcPhNeutro = 3105.0f;    // Leitura analógica obtida após leitura de solução tampão neutra.
+  float adcPhAlcalino = 2684.0f;  // Leitura analógica obtida após leitura de solução tampão alcalina.
 
-   public:
-    PH(uint8_t pinoPH, float fatorConversao, float tensaoPhNeutro);
+  void calculaPH();  // Calcula o valor de ph tendo como base o valor retornado pelo sensor
 
-    float getPH();  // Retorna o valor de PH calculado
+ public:
+  SensorPH(uint8_t pinoPh);
+  SensorPH(uint8_t pinoPH, float valorPhAcido, float adcPhAcido, float adcPhNeutro, float valorPhAlcalino, float adcPhAlcalino);
 
-    void setFatorConversao(float fatorConversao);  // Determina o fator de conversão
-    void setTensaoPhNeutro(float tensaoPhNeutro);  // Determina a tensão de referencia para PH 7 após a calibração
+  float getPH();  // Retorna o valor de PH calculado
 };
 
 #endif

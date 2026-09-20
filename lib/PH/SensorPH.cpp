@@ -6,58 +6,67 @@
  * Esse valor representa PH neutro (7). Com a conexão feita, basta ajustar o trimpot do módulo do sensor até que se consiga
  * um valor próximo de 2,5.
  *
+ * A utilização de soluções tampão é recomendada para uma calibração mais precisa. Lendo o valor na entrada analógica do microcontrolador, para
+ * solução tampão ácida (PH 4) e solução tampão alcalina (PH 10), assim como solução neutra. Esses valores devem ser referenciados na
+ * criação do objeto da classe SensorPH, para que o cálculo do PH seja mais preciso.
+ *
  * Outro ponto importante é ajustar a tensão para que o valor máximo enviado pelo sensor não seja superior a tensão máxima
- * esperada no pino do microcontrolador.
+ * esperada no pino do microcontrolador. Para isso é necessário um divisor de tensão, que pode ser feito com dois resistores.
+ * A tensão máxima esperada é de 3,3V, que representa PH 0.
  *
- * Para calcular o fator de conversão é necessário medir a tensão (V1) que o sensor envia em solução neutra (pH7) e a
- * tensão (V2) em solução alcalina (pH10), ou solução ácida(pH4).
+ * Um valor de offset é calculado separadamente para os valores ácidos e alcalinos, pois o sensor E201-C possui uma curva de resposta não linear,
+ * o que pode causar desvio significativo ao ler valores extremos de PH. O cálculo do offset é feito com base na diferença entre a leitura média
+ * do sensor e a leitura de referência para PH neutro (7), multiplicada pelo fator de conversão, que é determinado pela diferença entre os valores
+ * de referência para soluções tampão ácida e alcalina.
  *
- * Por fim calcular o fator de conversão = (pH4 - pH7) / V2 - V1
  */
 
 #include "SensorPH.h"
 
-PH::PH(uint8_t pinoPH, float fatorConversao, float tensaoPhNeutro) {
-    this->pinoPH = pinoPH;
-    this->tensaoPhNeutro = tensaoPhNeutro;
-    this->fatorConversao = fatorConversao;
+SensorPH::SensorPH(uint8_t pinoPH) {
+  this->pinoPH = pinoPH;
+}
 
-    offset = 7.0f - (tensaoPhNeutro * fatorConversao);
+SensorPH::SensorPH(uint8_t pinoPH, float valorPhAcido, float adcPhAcido, float adcPhNeutro, float valorPhAlcalino, float adcPhAlcalino) : SensorPH(pinoPH) {
+  this->valorPhAcido = valorPhAcido;
+  this->adcPhAcido = adcPhAcido;
+
+  this->adcPhNeutro = adcPhNeutro;
+
+  this->valorPhAlcalino = valorPhAlcalino;
+  this->adcPhAlcalino = adcPhAlcalino;
 }
 
 // Calcula o valor de ph tendo como base o valor retornado pelo sensor
-void PH::calculaPH() {
-    float tensaoRecebida = 0.0f;  // Varrável auxiliar que armazena a tensão rebebida no pino do esp32
-    float somatoria = 0.0f;       // Variável auxiliar que armazena a somatória de tensões para uma posteriormente calcular a média
+void SensorPH::calculaPH() {
+  float adcRecebido = 0.0f;  // Varrável auxiliar que armazena o valor rebebido no pino do esp32
+  float somatoria = 0.0f;    // Variável auxiliar que armazena a somatória dos valores para posteriormente calcular a média
+  float offset = 0.0f;       // Variável auxiliar que é utilizado para calcular o valor de PH a partir do valor lido
 
-    // Realiza várias leituras do sensor, somando os resultados, para estimar a média posteriormente.
-    // Isso ajuda a reduzir o ruído e obter uma leitura mais precisa.
-    for (uint16_t i = 0; i < amostras; i++) {
-        tensaoRecebida = (((float)analogRead(pinoPH) * 3.3f) / 4095.0f);  // Valor lido no pino do ESP32, convertido em V
+  // Realiza várias leituras do sensor, somando os resultados, para estimar a média.
+  // Isso ajuda a reduzir o ruído e obter uma leitura mais precisa.
+  for (uint16_t i = 0; i < amostras; i++) {
+    adcRecebido = (analogRead(pinoPH));  // Valor lido no pino do ESP32
 
-        somatoria += tensaoRecebida;  // Soma a tensão atual ao total
-        delay(2);                     // Pequena pausa entre as leituras para estabilizar o sensor.
-    }
+    somatoria += adcRecebido;  // Soma o valor atual ao total
+    delay(2);                  // Pequena pausa entre as leituras para estabilizar o sensor.
+  }
 
-    // Realiza a média entre os valores lidos
-    float leituraMedia = somatoria / amostras;
+  float leituraMedia = somatoria / amostras;  // Realiza a média entre os valores lidos
 
-    ph = (leituraMedia * fatorConversao) + offset;  // Converte a tensão para pH
+  // Calcula o offset com base na leitura média e nos valores de referência para soluções tampão ácida e alcalina.
+  if (leituraMedia < adcPhNeutro) {  // Caso a solução seja alcalina
+    offset = (valorPhAlcalino - 7.0f) / (adcPhAlcalino - adcPhNeutro);
+  } else {  // Caso ácida
+    offset = (7.0f - valorPhAcido) / (adcPhNeutro - adcPhAcido);
+  }
+
+  ph = 7.0f + (offset * (leituraMedia - adcPhNeutro));  // Atualiza o valor de ph
 }
 
 // Retorna o valor de PH calculado
-float PH::getPH() {
-    calculaPH();
+float SensorPH::getPH() {
+  calculaPH();
 
-    return ph;
-}
-
-// Determina a tensão de referencia para PH 7 após a calibração
-void PH::setFatorConversao(float fatorConversao) {
-    this->fatorConversao = fatorConversao;
-}
-
-// Determina a o fator de conversão calculado com a formula fC = (pH4 - pH7) / (VpH4 - VpH7)
-void PH::setTensaoPhNeutro(float tensaoPhNeutro) {
-    this->fatorConversao = fatorConversao;
+  return ph;
 }
