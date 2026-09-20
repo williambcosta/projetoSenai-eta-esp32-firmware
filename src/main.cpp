@@ -1,8 +1,10 @@
 /* ----- BIBLIOTECAS ----- */
 #include <Arduino.h>
+#include <WiFi.h>
 
 #include <vector>
 
+#include "MqttManager.h"
 #include "SaidaDigital.h"
 #include "SensorPH.h"
 #include "SensorTemperatura.h"
@@ -112,7 +114,7 @@ TanqueTratamento tanqueAtivos = TanqueTratamento(tempAtiv, phAtivos, ntuAtiv, sa
 /***** TANQUE FINAL *****/
 // Sensores
 SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);                   // Temperatura
-SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 250, 2.0f, 0.0f);         // Turbidez
+// SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 250, 2.0f, 0.0f);         // Turbidez
 SensorPH phFinal = SensorPH(PIN_PH_FINAL, 4.0f, 3705.5, 3105.0f, 10.0f, 2684.0f);  // Ph
 
 // Atuadores
@@ -134,6 +136,8 @@ unsigned long tempoArmazenamento = 0;  // Variável para armazenar o tempo anter
 unsigned long tempoAtivos = 0;         // Variável para armazenar o tempo anterior em milissegundos
 unsigned long tempoFinal = 0;          // Variável para armazenar o tempo anterior em milissegundos
 
+MqttManager mqtt = MqttManager("Willian", "#Ws120912", "90d42cec75d14181b23673d72f964713.s1.eu.hivemq.cloud", 8883, "espclient", "esp12345");
+
 /* ----- Configuração inicial ----- */
 void setup() {
   delay(1000);  // Aguarda 1 segundo para garantir que o sistema esteja estável antes de iniciar a configuração
@@ -146,13 +150,18 @@ void setup() {
 
   // Inicializa o registrador de deslocamento
   ShiftRegister::Instance().begin(DADOS, CLK, LATCH);
+  mqtt.begin("espclient_Comandos", "espclient_Dados");
 
   Serial.begin(115200);  // Inicializa a comunicação serial
 }
 
 /* ----- Loop principal ----- */
 void loop() {
-  // * Nível baixo sempre manda 1
+  mqtt.handle();
+
+  mqtt.publish(String(random(20, 35)).c_str());
+  
+    // * Nível baixo sempre manda 1
   // * Dosadores 2 ml/s
 
   /* Processo Tanque Armazenamento */
