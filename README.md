@@ -39,8 +39,20 @@ O firmware é responsável por automatizar a maquete física da Estação de Tra
     - [X] SensorTurbidez
         - [X] Calibração
     - [X] PH
-         - [ ] Calibração
+         - [X] Calibração
     - [X] Temperatura
 - [X] Criação de Classes para atuadores
-    - [ ] Adicionar temporização
-- [ ] Desenvolvimento inicial do fluxo do processo
+- [X] Desenvolvimento inicial do fluxo do processo
+    - [X] Configuração inicial das classes, sensores e atuadore
+    - [X] Processo tanque inicial
+    - [ ] Processo tanque de ativos
+        - [ ] Dosagem de Coagulante
+        - [ ] Dosagem de alcalinizante
+        - [ ] Dosagem de sanitizante
+    - [ ] Processo tanque de efluentes
+    - [ ] Processo tanque de água tratada
+        - [ ] Tratamento UV
+- [ ] Comunicação com HiveMQ Cloud
+    - [X] Conexão com o broker MQTT
+    - [ ] Publicação das leituras dos sensores
+    - [ ] Recebimento de comandos para acionamento dos atuadores
