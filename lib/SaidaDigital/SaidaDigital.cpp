@@ -5,10 +5,10 @@
  *
  * Caso mais de um registrador seja utilizado, o byteSaida irá representar o registrador e o bitSaida
  * irá representar a posição dentro do registrador.
- * 
+ *
  * Utiliza o Singleton ShiftRegister para controlar o registrador de deslocamento.
- * 
- * É importante chamar a funcão loop passando millis() como parametro para que o tempo seja atualizado 
+ *
+ * É importante chamar a funcão loop passando millis() como parametro para que o tempo seja atualizado
  *
  */
 
@@ -29,20 +29,20 @@ bool SaidaDigital::getStatus() {
 }
 
 // Função responsável por ligar o SaidaDigital
-void SaidaDigital::liga(uint8_t byteSaida, uint8_t bitSaida) {
+void SaidaDigital::liga() {
   if (nivelAtuacao == HIGH) {
-    ShiftRegister::Instance().setSaida(byteSaida, bitSaida, HIGH);
+    ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, HIGH);
   } else {
-    ShiftRegister::Instance().setSaida(byteSaida, bitSaida, LOW);
+    ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, LOW);
   }
 }
 
 // Função responsável por desligar o SaidaDigital
-void SaidaDigital::desliga(uint8_t byteSaida, uint8_t bitSaida) {
+void SaidaDigital::desliga() {
   if (nivelAtuacao == HIGH) {
-    ShiftRegister::Instance().setSaida(byteSaida, bitSaida, LOW);
+    ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, LOW);
   } else {
-    ShiftRegister::Instance().setSaida(byteSaida, bitSaida, HIGH);
+    ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, HIGH);
   }
 }
 

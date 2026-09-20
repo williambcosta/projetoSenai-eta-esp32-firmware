@@ -4,28 +4,11 @@
 
 #include "Tanque.h"
 // TODO: Refatorar. Criar uma classe mais simples e implementar herança dos tanques específicos
-Tanque::Tanque(SensorTemperatura& sensorTemp, SensorPH& sensorPH,
-               SensorTurbidez& sensorTurbidez, const std::vector<SaidaDigital>& atuadores,
-               uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo)
-    : temperatura(sensorTemp), ph(sensorPH), turbidez(sensorTurbidez), atuadores(atuadores) {
+Tanque::Tanque(const std::vector<SaidaDigital>& atuadores, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo)
+    : atuadores(atuadores) {
   // Inicializa os membros da classe
   this->pinoNivelAlto = pinoNivelAlto;
   this->pinoNivelBaixo = pinoNivelBaixo;
-}
-
-// Função que retornan a temperatura da água do tanque em C°
-float Tanque::getTemperatura() {
-  return temperatura.getTemperatura();
-}
-
-// Função que retorna a turbidez da água do tanque em NTU (Nephelometric Turbidity Units)
-float Tanque::getTurbidez() {
-  return turbidez.getTurbidez();
-}
-
-// Função que retorna o ph da água do tanque
-float Tanque::getPH() {
-  return ph.getPH();
 }
 
 // Função que indica se o nível da água do tanque está alto

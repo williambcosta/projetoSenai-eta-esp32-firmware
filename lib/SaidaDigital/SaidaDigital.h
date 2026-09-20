@@ -9,10 +9,9 @@
 
 class SaidaDigital {
  private:
-
   bool estado = false;  // Armazena o estado da saida. TRUE = ligado, FALSE = desligado
 
-  //long tempo = 0;  // Armazena o tempo em que a saida foi ligada
+  // long tempo = 0;  // Armazena o tempo em que a saida foi ligada
 
   /*
    * Representação do registrador de deslocamento que controla a saida. O byte irá representar o registrador, caso mais de
@@ -31,11 +30,11 @@ class SaidaDigital {
 
   bool getStatus();  // Retorna o estado atual do SaidaDigital. TRUE = ligado, FALSE = desligado
 
-  void liga(uint8_t byteSaida, uint8_t bitSaida);                            // Função responsável por ligar o SaidaDigital
-  void desliga(uint8_t byteSaida, uint8_t bitSaida);                         // Função responsável por desligar o SaidaDigital
-  //void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minutos);    // Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
-  //void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos);  // Função responsável por desligar a saída após o tempo determinado em segundos. O valor será limitado a 15300 segundos
-  void begin();                                                              // Funcão responsável por configurar o pino de saida do SaidaDigital
+  void liga();     // Função responsável por ligar o SaidaDigital
+  void desliga();  // Função responsável por desligar o SaidaDigital
+  // void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minutos);    // Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
+  // void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos);  // Função responsável por desligar a saída após o tempo determinado em segundos. O valor será limitado a 15300 segundos
+  void begin();  // Funcão responsável por configurar o pino de saida do SaidaDigital
 };
 
 #endif
