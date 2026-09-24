@@ -9,8 +9,6 @@
 
 class SaidaDigital {
  private:
-  bool estado = false;  // Armazena o estado da saida. TRUE = ligado, FALSE = desligado
-
   // long tempo = 0;  // Armazena o tempo em que a saida foi ligada
 
   /*
@@ -32,8 +30,9 @@ class SaidaDigital {
 
   bool getStatus();  // Retorna o estado atual do SaidaDigital. TRUE = ligado, FALSE = desligado
 
-  void liga();     // Função responsável por ligar o SaidaDigital
-  void desliga();  // Função responsável por desligar o SaidaDigital
+  void liga();                                 // Função responsável por ligar o SaidaDigital
+  void desliga();                              // Função responsável por desligar o SaidaDigital
+  void setNivelAtuacao(uint8_t nivelAtuacao);  // Função responsável por definir o nível lógico usado para ativar a saída. Se deve atuar em HIGH ou LOW
   // void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minutos);    // Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
   // void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos);  // Função responsável por desligar a saída após o tempo determinado em segundos. O valor será limitado a 15300 segundos
 };

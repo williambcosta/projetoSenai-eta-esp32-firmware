@@ -70,8 +70,7 @@ enum class EtapaProcesso {
   Inicial,
   VerificNivelAltoArmaz,
   EsvaziandoTqArmaz,
-  VerificNivelBaixoArmaz,
-  VerificNivelAltoAtivos,
+  VerificTransferenciaAtivos,
   DosandoCoagulante,
   VerificNivelBaixoAtivos,
   DosandoAlcalinizante,
@@ -113,7 +112,7 @@ TanqueTratamento tanqueAtivos = TanqueTratamento(tempAtiv, phAtivos, ntuAtiv, sa
 
 /***** TANQUE FINAL *****/
 // Sensores
-SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);                   // Temperatura
+SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);  // Temperatura
 // SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 250, 2.0f, 0.0f);         // Turbidez
 SensorPH phFinal = SensorPH(PIN_PH_FINAL, 4.0f, 3705.5, 3105.0f, 10.0f, 2684.0f);  // Ph
 
@@ -131,7 +130,7 @@ std::vector<SaidaDigital> saidasEfluentes = {SaidaDigital(PIN_BOMBA_PM3)};
 Tanque tanqueEfluentes = Tanque(saidasEfluentes, PIN_SNA_EFLU, PIN_SNB_EFLU);
 
 // Variáveis utilitárias e de controle do processo
-int tempoDeVerificação = 1000;         // Intervalo de tempo em milissegundos para verificar o nível dos tanques
+int tempoDeVerificacao = 1000;         // Intervalo de tempo em milissegundos para verificar o nível dos tanques
 unsigned long tempoArmazenamento = 0;  // Variável para armazenar o tempo anterior em milissegundos
 unsigned long tempoAtivos = 0;         // Variável para armazenar o tempo anterior em milissegundos
 unsigned long tempoFinal = 0;          // Variável para armazenar o tempo anterior em milissegundos
@@ -160,8 +159,8 @@ void loop() {
   mqtt.handle();
 
   mqtt.publish(String(random(20, 35)).c_str());
-  
-    // * Nível baixo sempre manda 1
+
+  // * Nível baixo sempre manda 1
   // * Dosadores 2 ml/s
 
   /* Processo Tanque Armazenamento */
@@ -208,7 +207,7 @@ void loop() {
   // Tanque de armazenamento senso enchido
   if (etapaAtual == EtapaProcesso::Inicial) {
     if (tanqueArmazenamento.isNivelAlto()) {              // Se nível alto
-      etapaAtual = EtapaProcesso::VerificNivelAltoArmaz;  // Muda a etapa do processo para "EsvaziandoTqArmaz"
+      etapaAtual = EtapaProcesso::VerificNivelAltoArmaz;  // Muda a etapa do processo para "VerificNivelAltoArmaz"
       tempoArmazenamento = millis();                      // Armazena o tempo atual em milissegundos
     }
   }
@@ -216,8 +215,8 @@ void loop() {
   // Verificando se o tanque de armazenamento está cheio e controlando a bomba PM1
   if (etapaAtual == EtapaProcesso::VerificNivelAltoArmaz) {
     if (tanqueArmazenamento.isNivelAlto()) {
-      if (millis() - tempoArmazenamento >= tempoDeVerificação) {  // Verifica se se passou 1 segundo desde o último acionamento
-        etapaAtual = EtapaProcesso::EsvaziandoTqArmaz;            // Muda a etapa do processo para "VerificNivelBaixoArmaz"
+      if (millis() - tempoArmazenamento >= tempoDeVerificacao) {  // Verifica se se passou 1 segundo desde o último acionamento
+        etapaAtual = EtapaProcesso::EsvaziandoTqArmaz;            // Muda a etapa do processo para "EsvaziandoTqArmaz"
         tanqueArmazenamento.ligaAtuador(0);                       // Liga a bomba PM1 para transferir água para o tanque de ativos
       }
     }
@@ -225,22 +224,18 @@ void loop() {
 
   // Esvaziando o tanque de armazenamento e controlando a bomba PM1
   if (etapaAtual == EtapaProcesso::EsvaziandoTqArmaz) {
-    if (tanqueArmazenamento.isNivelBaixo()) {              // Se nível baixo
-      etapaAtual = EtapaProcesso::VerificNivelBaixoArmaz;  // Muda a etapa do processo para "EsvaziandoTqArmaz"
-      tempoArmazenamento = millis();                       // Armazena o tempo atual em milissegundos para o tanque de ativos
-    }
-
-    if (tanqueAtivos.isNivelAlto()) {
-      etapaAtual = EtapaProcesso::VerificNivelAltoAtivos;
+    if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // Se nível baixo
+      etapaAtual = EtapaProcesso::VerificTransferenciaAtivos;                // Muda a etapa do processo para "VerificTransferenciaAtivos"
+      tempoArmazenamento = millis();                                         // Armazena o tempo atual em milissegundos para o tanque de ativos
     }
   }
 
   // Verificando se o tanque de armazenamento está vazio e controlando a bomba PM1
-  if (etapaAtual == EtapaProcesso::VerificNivelBaixoArmaz) {
-    if (tanqueArmazenamento.isNivelBaixo()) {                     // Se nível alto
-      if (millis() - tempoArmazenamento >= tempoDeVerificação) {  // Verifica se se passou 1 segundo desde o último acionamento
-        tanqueArmazenamento.desligaAtuador(0);                    // Desliga a bomba PM1 para interromper a transferência de água para o tanque de ativos
-        etapaAtual = EtapaProcesso::VerificNivelAltoAtivos;       // Muda a etapa do processo para "EsvaziandoTqArmaz"
+  if (etapaAtual == EtapaProcesso::VerificTransferenciaAtivos) {
+    if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // Se nível alto
+      if (millis() - tempoArmazenamento >= tempoDeVerificacao) {             // Verifica se se passou 1 segundo desde o último acionamento
+        tanqueArmazenamento.desligaAtuador(0);                               // Desliga a bomba PM1 para interromper a transferência de água para o tanque de ativos
+        etapaAtual = EtapaProcesso::DosandoCoagulante;                       // Muda a etapa do processo para "DosandoCoagulante"
       }
     }
   }

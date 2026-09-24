@@ -15,12 +15,12 @@
 #include "SaidaDigital.h"
 
 SaidaDigital::SaidaDigital(std::string saida) {
-  this->byteSaida = saida[0] - '0';           // Converte o caractere do byte para um índice numérico
-  this->bitSaida = saida[2] - '0';            // Converte o caractere do bit para um índice numérico
+  this->byteSaida = saida[0] - '0';  // Converte o caractere do byte para um índice numérico
+  this->bitSaida = saida[2] - '0';   // Converte o caractere do bit para um índice numérico
 }
 
 SaidaDigital::SaidaDigital(std::string saida, uint8_t nivelAtuacao) : SaidaDigital(saida) {
-  this->nivelAtuacao = nivelAtuacao;
+  setNivelAtuacao(nivelAtuacao);
 }
 
 SaidaDigital::SaidaDigital(uint8_t byteSaida, uint8_t bitSaida) {
@@ -29,12 +29,12 @@ SaidaDigital::SaidaDigital(uint8_t byteSaida, uint8_t bitSaida) {
 }
 
 SaidaDigital::SaidaDigital(uint8_t byteSaida, uint8_t bitSaida, uint8_t nivelAtuacao) : SaidaDigital(byteSaida, bitSaida) {
-  this->nivelAtuacao = nivelAtuacao;
+  setNivelAtuacao(nivelAtuacao);
 }
 
 // Retorna o estado atual do SaidaDigital. TRUE = ligado, FALSE = desligado
 bool SaidaDigital::getStatus() {
-  return estado;
+  return ShiftRegister::Instance().isAtuado(this->byteSaida, this->bitSaida);
 }
 
 // Função responsável por ligar o SaidaDigital
@@ -48,6 +48,16 @@ void SaidaDigital::liga() {
 
 // Função responsável por desligar o SaidaDigital
 void SaidaDigital::desliga() {
+  if (nivelAtuacao == HIGH) {
+    ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, LOW);
+  } else {
+    ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, HIGH);
+  }
+}
+
+// Função responsável por definir o nível lógico usado para ativar a saída. Se deve atuar em HIGH ou LOW
+void SaidaDigital::setNivelAtuacao(uint8_t nivelAtuacao) {
+  this->nivelAtuacao = nivelAtuacao;
   if (nivelAtuacao == HIGH) {
     ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, LOW);
   } else {

@@ -38,6 +38,8 @@ class ShiftRegister {
   void setSaida(uint8_t byteIndex, uint8_t bitIndex, bool valor);   // Define o estado de uma saída específica no registrador de deslocamento
   void setSaida(std::string saida, bool valor);                     // Define o estado de uma saída específica no registrador de deslocamento usando a notação "x.y" sendo x o byte e y o bit
   void atualizarSaidas();                                           // Atualiza os pinos de saída do registrador de deslocamento com os valores armazenados no array de dados
+  bool isAtuado(uint8_t byteIndex, uint8_t bitIndex);               // Verifica se uma saída específica está atuada (ligada)
+  bool isAtuado(std::string saida);                                 // Verifica se uma saída específica está atuada (ligada) usando a notação "x.y" sendo x o byte e y o bit
 };
 
 #endif

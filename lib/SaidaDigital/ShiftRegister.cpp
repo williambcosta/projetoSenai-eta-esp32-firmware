@@ -55,12 +55,25 @@ void ShiftRegister::setSaida(std::string saida, bool valor) {
 void ShiftRegister::atualizarSaidas() {
   digitalWrite(latchPin, LOW);  // Coloca o pino de latch em LOW para iniciar a atualização dos pinos de saída
 
-  uint8_t tamanho = sizeof(dados) / sizeof(dados[0]);  // Calcula o tamanho do array de dados
+  int8_t tamanho = sizeof(dados) / sizeof(dados[0]);  // Calcula o tamanho do array de dados
 
   // Envia os dados para o registrador de deslocamento atualizando os bytes de saída, começando pelo último byte
-  for (uint8_t i = tamanho - 1; i >= 0; i--) {
+  for (int8_t i = tamanho - 1; i >= 0; i--) {
     shiftOut(dataPin, clockPin, MSBFIRST, dados[i]);  // Envia o byte atual para o registrador de deslocamento
   }
 
   digitalWrite(latchPin, HIGH);  // Coloca o pino de latch em HIGH para transferir os dados para as saídas
+}
+
+// Verifica se uma saída específica está atuada (ligada)
+bool ShiftRegister::isAtuado(uint8_t byteIndex, uint8_t bitIndex) {
+  return dados[byteIndex] >> bitIndex & 1;  // Retorna o estado do bit específico no array de dados
+}
+
+// Verifica se uma saída específica está atuada (ligada) usando a notação "x.y" sendo x o byte e y o bit
+bool ShiftRegister::isAtuado(std::string saida) {
+  uint8_t byteIndex = saida[0] - '0';  // Converte o caractere do byte para um índice numérico
+  uint8_t bitIndex = saida[2] - '0';   // Converte o caractere do bit para um índice numérico
+
+  return isAtuado(byteIndex, bitIndex);  // Chama a função isAtuado para verificar o estado da saída
 }
