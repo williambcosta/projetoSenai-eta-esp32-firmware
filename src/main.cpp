@@ -165,7 +165,6 @@ void setup() {
 
   Serial.begin(115200);  // Inicializa a comunicação serial
 }
-
 /* ----- Loop principal ----- */
 void loop() {
   // TODO: Implementar alertas
@@ -177,7 +176,7 @@ void loop() {
   // * Dosadores 2 ml/s
 
   /* Processo Tanque Armazenamento */
-  //  1.1 - Se nível alto && Nível baixo ...
+  //  1.1 - Se nível alto...
   //  1.2 - ...por 1s liga bomba PM1
   //  1.3 - Se nível baixo por 1s tanque armazenamento em qualquer momento do processo...
   //  1.4 - ...desliga PM1
@@ -218,7 +217,7 @@ void loop() {
   // 31 - Se Armazenamento Nível alto || Efluentes Nível baixo
   // 32 - Para PM3
 
-  /* Processo Tanque Armazenamento */
+  /* Processo Tanque Armazenamento 
   // Tanque de armazenamento Enchendo
   if (etapaAtual == EtapaProcesso::Inicial) {
     if (tanqueArmazenamento.isNivelAlto()) {              // (* 1.1) Se nível alto
@@ -255,5 +254,5 @@ void loop() {
     }
   }
 
-  // TODO: Verificar se caso o armazenamento chegue no nível baixo antes de encher o ativos e vice versa o que fazer
+  // TODO: Verificar se caso o armazenamento chegue no nível baixo antes de encher o ativos e vice versa o que fazer*/
 }

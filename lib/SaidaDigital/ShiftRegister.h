@@ -2,6 +2,17 @@
  * Declaração da classe ShiftRegister para controle de registradores de deslocamento. Ela será responsável
  * por gerenciar a comunicação com os registradores de deslocamento 74HC595, permitindo o controle de múltiplas
  * saídas digitais a partir de um número limitado de pinos do microcontrolador.
+ * 
+ * Ligação dos terminais do 74HC595:
+ * - VCC (Pin 16): Conectar ao pino de 5V do microcontrolador.
+ * - GND (Pin 8): Conectar ao pino de terra do microcontrolador.
+ * - DS (Pin 14): Conectar ao pino de dados (dataPin) do microcontrolador.
+ * - SHCP (Pin 11): Conectar ao pino de clock (clockPin) do microcontrolador.
+ * - STCP (Pin 12): Conectar ao pino de latch (latchPin) do microcontrolador.
+ * - OE (Pin 13): Conectar ao pino de terra do microcontrolador para habilitar a saída.
+ * - MR (Pin 10): Conectar ao pino de 5V do microcontrolador para desabilitar o reset.
+ * - Q0 a Q7 (Pins 15, 1, 2, 3, 4, 5, 6, 7): Pinos de saída do registrador de deslocamento.
+ * - Q7' (Pin 9): Pino de saída serial para encadear múltiplos registradores de deslocamento.
  */
 #ifndef SHIFT_REGISTER_H
 #define SHIFT_REGISTER_H
