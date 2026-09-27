@@ -4,15 +4,15 @@
  * saídas digitais a partir de um número limitado de pinos do microcontrolador.
  * 
  * Ligação dos terminais do 74HC595:
- * - VCC (Pin 16): Conectar ao pino de 5V do microcontrolador.
- * - GND (Pin 8): Conectar ao pino de terra do microcontrolador.
- * - DS (Pin 14): Conectar ao pino de dados (dataPin) do microcontrolador.
- * - SHCP (Pin 11): Conectar ao pino de clock (clockPin) do microcontrolador.
- * - STCP (Pin 12): Conectar ao pino de latch (latchPin) do microcontrolador.
- * - OE (Pin 13): Conectar ao pino de terra do microcontrolador para habilitar a saída.
- * - MR (Pin 10): Conectar ao pino de 5V do microcontrolador para desabilitar o reset.
- * - Q0 a Q7 (Pins 15, 1, 2, 3, 4, 5, 6, 7): Pinos de saída do registrador de deslocamento.
- * - Q7' (Pin 9): Pino de saída serial para encadear múltiplos registradores de deslocamento.
+ * - VCC (Pino 16): Conectar ao pino de 5V do microcontrolador.
+ * - GND (Pino 8): Conectar ao pino de terra do microcontrolador.
+ * - DS (Pino 14): Conectar ao pino de dados (dataPin) do microcontrolador.
+ * - SHCP (Pino 11): Conectar ao pino de clock (clockPin) do microcontrolador.
+ * - STCP (Pino 12): Conectar ao pino de latch (latchPin) do microcontrolador.
+ * - OE (Pino 13): Conectar ao pino de terra do microcontrolador para habilitar a saída.
+ * - MR (Pino 10): Conectar ao pino de 5V do microcontrolador para desabilitar o reset.
+ * - Q0 a Q7 (Pinos 15, 1, 2, 3, 4, 5, 6, 7): Pinos de saída do registrador de deslocamento.
+ * - Q7' (Pino 9): Pino de saída serial para encadear múltiplos registradores de deslocamento. Ligar esse ao terminal DS (Pino 14) de outro CI.
  */
 #ifndef SHIFT_REGISTER_H
 #define SHIFT_REGISTER_H

@@ -8,25 +8,27 @@
 #ifndef MQTT_MANAGER_H
 #define MQTT_MANAGER_H
 
-#define TOPICO_DADOS 1
-#define TOPICO_COMANDOS 2
-#define TOPICO_ALERTAS 3
-
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 
+#define TOPICO_DADOS 1     // Definição do tópico de dados
+#define TOPICO_COMANDOS 2  // Definição do tópico de comandos
+#define TOPICO_ALERTAS 3   // Definição do tópico de alertas
+
 class MqttManager {
  private:
-  const char* wifi_ssid;             // SSID da rede Wi-Fi
-  const char* wifi_senha;            // Senha da rede Wi-Fi
-  const char* mqtt_servidor;         // Endereço do servidor MQTT
-  int mqtt_porta;                    // Porta do servidor MQTT
+  const char* wifi_ssid;      // SSID da rede Wi-Fi
+  const char* wifi_senha;     // Senha da rede Wi-Fi
+  const char* mqtt_servidor;  // Endereço do servidor MQTT
+
+  int mqtt_porta;  // Porta do servidor MQTT
+
   const char* mqtt_usuario;          // Nome de usuário para autenticação MQTT
   const char* mqtt_senha;            // Senha para autenticação MQTT
-  const char* mqtt_topico_dados;     // Tópico para publicar dados. É como um filtro de mensagems
-  const char* mqtt_topico_comandos;  // Tópico para receber dados.
-  const char* mqtt_topico_alertas;   // Tópico para receber alertas.
+  const char* mqtt_topico_dados;     // Tópico para publicar dados.
+  const char* mqtt_topico_comandos;  // Tópico para receber comandos.
+  const char* mqtt_topico_alertas;   // Tópico para enviar alertas.
 
   WiFiClientSecure espClient;  // Cliente seguro para comunicação MQTT
   PubSubClient client;         // Cliente MQTT
@@ -49,7 +51,7 @@ class MqttManager {
 
   void begin(const char* topicoComandos = nullptr, const char* topicoDados = nullptr, const char* topicoAlertas = nullptr);  // Inicializa a conexão Wi-Fi e configura o cliente MQTT, opcionalmente assinando um tópico de comandos
   void handle();                                                                                                             // Função responsável por chamar o loop do cliente MQTT e manter a conexão ativa
-  bool publish(uint8_t topico, const char* mensagem);                                                                                         // Função para publicar mensagens em um tópico específico
+  bool publish(uint8_t topico, const char* mensagem);                                                                        // Função para publicar mensagens em um tópico específico
 
   String getUltimaMsg() const { return ultimaMsg; }  // Retorna a última mensagem recebida
 

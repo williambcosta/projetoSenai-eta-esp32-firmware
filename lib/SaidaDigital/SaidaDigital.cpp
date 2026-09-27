@@ -8,8 +8,6 @@
  *
  * Utiliza o Singleton ShiftRegister para controlar o registrador de deslocamento.
  *
- * É importante chamar a funcão loop passando millis() como parametro para que o tempo seja atualizado
- *
  */
 
 #include "SaidaDigital.h"
@@ -64,16 +62,3 @@ void SaidaDigital::setNivelAtuacao(uint8_t nivelAtuacao) {
     ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, HIGH);
   }
 }
-
-// TODO: Finalizar a implementação das funções desligaApos
-// TODO: Na verdade não vou fazer mais. Vai aumentar muito a complexidade, não tenho tempo pra isso agora
-/*
-// Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
-void SaidaDigital::desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minutos) {
-  liga(byteSaida, bitSaida);
-}
-
-// Função responsável por desligar a saída após o tempo determinado em segundos. O valor será limitado a 15300 segundos
-void SaidaDigital::desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos) {
-}
-*/

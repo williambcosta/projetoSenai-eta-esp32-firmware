@@ -18,6 +18,8 @@ MqttManager::MqttManager(const char* ssid, const char* wifiSenha, const char* se
 
 // Função para configurar a conexão Wi-Fi
 void MqttManager::setupWifi() {
+  // TODO: Seria interessante implementar uma lógica para alterar a rede e senha caso não fosse possível a conexão, mas não tenho tempo pra isso
+
   if (WiFi.status() == WL_CONNECTED) return;  // Caso a placa já esteja conectada retorna sem fazer nada
 
   Serial.print("\nConectando em ");

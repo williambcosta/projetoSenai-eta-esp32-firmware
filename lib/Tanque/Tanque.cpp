@@ -1,9 +1,22 @@
-/*
+/**
  * Classe responsável por gerenciar os sensores de temperatura, turbidez e pH do tanque de água, bem como os sensores de nível alto e baixo.
+ *
+ * O método begin deve ser chamado para configurar os pinos dos sensores de nível. Isso deve ser feito dentro, ou após, da função setup()
+ * Isso garante que nenhuma operação com GPIOs seja executada antes da inicialização completa da placa.
+ * 
+ * Os pinos dos sensores são configurados como INPUT_PULLUP, o que significa que o pino espera nível lógico HIGH o tempo todo que o sensor
+ * estiver em estado normal. Caso ativado ele deve mudar de nível para LOW.
+ * 
+ * Como o esp já possue resistor de pull up na maioria das entradas, basta ligar o sensor no gnd e o retorno no pino específico.
+ * 
+ * GPIOs com resistor de Pull-up:
+ *  0, 2, 4, 5, 12 até 23, 25, 26, 27, 32 e 33
+ * 
+ * GPIOs exclusivos para entrada analógica ou digital não possuem resistor de Pull-up, são eles:
+ * 34, 35, 36 (VP) e 39 (VN)
  */
 
 #include "Tanque.h"
-// TODO: Refatorar. Criar uma classe mais simples e implementar herança dos tanques específicos
 Tanque::Tanque(const std::vector<SaidaDigital>& atuadores, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo)
     : atuadores(atuadores) {
   // Inicializa os membros da classe
@@ -21,7 +34,8 @@ bool Tanque::isNivelBaixo() {
   return digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == HIGH;
 }
 
-/* Função que indica se exite falha nos sensores. Garante a falha apenas em uma situação, quando o sensor de nível alto
+/**
+ * Função que indica se exite falha nos sensores. Garante a falha apenas em uma situação, quando o sensor de nível alto
  * estiver acionado e o baixo não, mas pode ser útil para identificar problemas.
  */
 bool Tanque::isFalhaSensores() {
@@ -32,10 +46,10 @@ bool Tanque::isFalhaSensores() {
   return false;
 }
 
-/*
+/**
  * Função responsável por indicar o estado do atuador indicado.
  *
- * Retorna FALSE mesmo quando não existir o indice solicitado. Deve ser usada em conjunto com hasAtuador(indiceAtuador)
+ * Retorna FALSE mesmo quando não existir o indice solicitado.
  */
 bool Tanque::isAtuadorLigado(uint8_t indiceAtuador) {
   if (hasAtuador(indiceAtuador)) {  // Verifica se o indice é maior ou igual ao tamanho do vetor
@@ -50,14 +64,18 @@ bool Tanque::hasAtuador(uint8_t indiceAtuador) {
   return (indiceAtuador >= 0) && (indiceAtuador < atuadores.size());
 }
 
-// Liga o atuador indicado.
+// Liga o atuador indicado. Caso o mesmo já esteja ligado, não faz nada.
 void Tanque::ligaAtuador(uint8_t indiceAtuador) {
-  atuadores[indiceAtuador].liga();
+  if (!isAtuadorLigado(indiceAtuador)) {
+    atuadores[indiceAtuador].liga();
+  }
 }
 
-// Desliga o atuador indicado.
+// Desliga o atuador indicado. Caso o mesmo já esteja desligado, não faz nada.
 void Tanque::desligaAtuador(uint8_t indiceAtuador) {
-  atuadores[indiceAtuador].desliga();
+  if (isAtuadorLigado(indiceAtuador)) {
+    atuadores[indiceAtuador].desliga();
+  }
 }
 
 // Funcão responsável por configurar os pinos de entrada de nível do tanque

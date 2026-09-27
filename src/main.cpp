@@ -16,11 +16,11 @@
 /* ----- DEFINICÕES ----- */
 /* ----- Configurações de Comunicação ----- */
 #define MQTT_BROKER "90d42cec75d14181b23673d72f964713.s1.eu.hivemq.cloud"
-#define MQTT_PORTA 8883
-#define MQTT_SENHA "esp12345"
-#define MQTT_USUARIO "espclient"
-#define WIFI_SENHA "#Ws120912"
-#define WIFI_SSID "Willian"
+#define MQTT_PORTA 8883           // Porta padrão para conexões MQTT seguras (TLS/SSL)
+#define MQTT_SENHA "esp12345"     // Senha do usuário MQTT
+#define MQTT_USUARIO "espclient"  // Usuário MQTT
+#define WIFI_SENHA "#Ws120912"    // Senha da rede Wi-Fi
+#define WIFI_SSID "Willian"       // SSID da rede Wi-Fi
 
 /* ----- Entradas Analógicas ----- */
 // Sensores de turbidez
@@ -80,6 +80,8 @@ enum class EtapaProcesso {
   EsvaziandoTqArmaz,
   VerificTransferenciaAtivos,
   DosandoCoagulante,
+  VerificandoPhAposCoagulante,
+  Homogeneizando,
   VerificNivelBaixoAtivos,
   DosandoAlcalinizante,
   Coagulacao,
@@ -90,7 +92,8 @@ enum class EtapaProcesso {
   Finalizado
 };
 
-EtapaProcesso etapaAtual = EtapaProcesso::Inicial;  // Variável para armazenar a etapa atual do processo
+EtapaProcesso etapaAtual = EtapaProcesso::Inicial;     // Variável para armazenar a etapa atual do processo
+EtapaProcesso etapaAnterior = EtapaProcesso::Inicial;  // Variável para armazenar a etapa anterior do processo
 
 /*****  TANQUE DE ARMAZENAMENTO *****/
 // Atuadores
@@ -106,14 +109,15 @@ SensorTurbidez ntuAtiv = SensorTurbidez(PIN_TBDZ_ATIVOS, 250, 2.0f, 0.0f);      
 SensorPH phAtivos = SensorPH(PIN_PH_ATIVOS, 4.0f, 3705.5, 3105.0f, 10.0f, 2684.0f);  // Ph
 
 // Atuadores
-std::vector<SaidaDigital> saidasAtivos = {  // Indices
-  SaidaDigital(PIN_BOMBA_PM2),              // 0
-  SaidaDigital(PIN_RM1_ATIV),               // 1
-  SaidaDigital(PIN_DOSADOR_CLORETO),        // 2
-  SaidaDigital(PIN_DOSADOR_CARBONATO),      // 3
-  SaidaDigital(PIN_DOSADOR_HIPOCLORITO),    // 4
-  SaidaDigital(PIN_SOL_EFLU),               // 5
-  SaidaDigital(PIN_SOL_FINAL)               // 6
+std::vector<SaidaDigital> saidasAtivos = {
+    // Indices
+    SaidaDigital(PIN_BOMBA_PM2),            // 0
+    SaidaDigital(PIN_RM1_ATIV),             // 1
+    SaidaDigital(PIN_DOSADOR_CLORETO),      // 2
+    SaidaDigital(PIN_DOSADOR_CARBONATO),    // 3
+    SaidaDigital(PIN_DOSADOR_HIPOCLORITO),  // 4
+    SaidaDigital(PIN_SOL_EFLU),             // 5
+    SaidaDigital(PIN_SOL_FINAL)             // 6
 };
 
 // Instancia
@@ -121,7 +125,7 @@ TanqueTratamento tanqueAtivos = TanqueTratamento(tempAtiv, phAtivos, ntuAtiv, sa
 
 /***** TANQUE FINAL *****/
 // Sensores
-SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);  // Temperatura
+SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);                   // Temperatura
 SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 250, 2.0f, 0.0f);         // Turbidez
 SensorPH phFinal = SensorPH(PIN_PH_FINAL, 4.0f, 3705.5, 3105.0f, 10.0f, 2684.0f);  // Ph
 
@@ -139,10 +143,23 @@ std::vector<SaidaDigital> saidasEfluentes = {SaidaDigital(PIN_BOMBA_PM3)};
 Tanque tanqueEfluentes = Tanque(saidasEfluentes, PIN_SNA_EFLU, PIN_SNB_EFLU);
 
 /* ----- Variáveis utilitárias e de controle do processo ----- */
-int tempoDeVerificacao = 1000;         // Intervalo de tempo em milissegundos para verificar o nível dos tanques
-unsigned long tempoArmazenamento = 0;  // Variável para armazenar o tempo anterior em milissegundos
-unsigned long tempoAtivos = 0;         // Variável para armazenar o tempo anterior em milissegundos
-unsigned long tempoFinal = 0;          // Variável para armazenar o tempo anterior em milissegundos
+int tempoDeVerificacao = 1000;  // Intervalo de tempo em milissegundos para verificar o nível dos tanques
+int tempoMistura = 5000;        // Intervalo após dosagem de quimica para homogeinização da agua antes de nova medição de parâmetros
+
+float tempoDosagemCoagulante = 5000.0f;     // Tempo de dosagem do coagulante em milissegundos
+float tempoDosagemAlcalinizante = 5000.0f;  // Tempo de dosagem do alcalinizante em milissegundos
+float tempoDosagemSanitizante = 5000.0f;    // Tempo de dosagem do sanitizante em milissegundos
+
+unsigned long tempoArmazenamento = 0;  // Variável para armazenar o inicio da contagem do tanque de armazenamento
+unsigned long tempoAtivos = 0;         // Variável para armazenar o inicio da contagem do tanque de ativos
+unsigned long tempoFinal = 0;          // Variável para armazenar o inicio da contagem do tanque final
+unsigned long tempoDosagem = 0;        // Variável para armazenar o inicio da contagem do tanque de dosagem dos quimicos
+
+// pH alvo após dosagem dos químicos
+float histerese = 0.5f;
+float alvoPhCoagulante = 7.0f;     // Alvo de pH após dosagem do Coagulante
+float alvoPhAlcalinizante = 7.0f;  // Alvo de pH após dosagem do Alcalinizante
+float alvoPhSanitizante = 7.0f;    // Alvo de pH após dosagem do Sanitizante
 
 // Instancia do gerenciador MQTT para comunicação com o HiveMQ Cloud
 MqttManager mqtt = MqttManager(WIFI_SSID, WIFI_SENHA, MQTT_BROKER, MQTT_PORTA, MQTT_USUARIO, MQTT_SENHA);
@@ -176,51 +193,54 @@ void loop() {
   // * Dosadores 2 ml/s
 
   /* Processo Tanque Armazenamento */
-  //  1.1 - Se nível alto...
-  //  1.2 - ...por 1s liga bomba PM1
-  //  1.3 - Se nível baixo por 1s tanque armazenamento em qualquer momento do processo...
-  //  1.4 - ...desliga PM1
-  //  1.5 - PM1 ativo até tanque ativos nível alto por 1s
+  // 1.1 - Se nível alto...
+  // 1.2 - ...por 1s liga bomba PM1
+  // 1.3 - Se nível baixo por 1s tanque armazenamento em qualquer momento do processo...
+  // 1.4 - PM1 ativo até tanque ativos nível alto por 1s
+  // 1.5 - ...desliga PM1
 
   /* Processo Tanque Ativos */
-  //  4 - Nível alto && nível baixo tanque ativos por 1s
-  //  5 - Inicia agitação RM1
-  //  6 - Calcula o tempo de dosagem do coagulante (formula ? vai considerar o ph)
-  //  7 - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
-  //  8 - Ph em nível X interromper dosagem de coagulante
-  //  9 - Inicia dosagem de alcalinizante
-  // 10 - Calcula o tempo de dosagem do alcalinizante (formula ? vai considerar o ph)
-  // 11 - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
-  // 12 - Ph em nível X interromper dosagem de alcalinizante
-  // 13 - Mantém a agitação por mais 5s
-  // 14 - Pausa a agitação por 5m
-  // 15 - Aciona HVK1, Descarrega efluentes (acionando PM2) após verificação de NTU
-  // 16 - Manter PM2 por +/- 30s
-  // 17 - Desaciona HVK1
-  // 18 - Iniciar agitação (RM1)
-  // 19 - Calcula o tempo de dosagem do sanitizante (formula ? vai considerar o volume)
-  // 20 - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
-  // 21 - Ph em nível 7 interromper dosagem de sanitizante
-  // 22 - Mantém a agitação até PH interrupção de dosagem sanitizante
-  // 23 - Aciona HVK2
-  // 24 - Aciona PM2 se nível baixo
-  // 25 - PM2 desaciona quando Armazenamento Nivel alto || Ativos Nível Baixo
+  // 2.1 - Nível alto && nível baixo tanque ativos por 1s
+  // 2.2 - Inicia agitação RM1
+  // 2.3 - Calcula o tempo de dosagem do coagulante (formula ? vai considerar o ph)
+  // 2.4 - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
+  // 2.5 - Ph em nível X interromper dosagem de coagulante
+
+  // 2.6 - Inicia dosagem de alcalinizante
+  // 2.7 - Calcula o tempo de dosagem do alcalinizante (formula ? vai considerar o ph)
+  // 2.8 - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
+  // 2.9 - Ph em nível X interromper dosagem de alcalinizante
+  // 2.10 - Mantém a agitação por mais 5s
+  // 2.14 - Pausa a agitação por 5m
+  // 2.15 - Aciona HVK1, Descarrega efluentes (acionando PM2) após verificação de NTU
+  // 2.16 - Manter PM2 por +/- 30s
+  // 2.17 - Desaciona HVK1
+  // 2.18 - Iniciar agitação (RM1)
+
+  // 2.19 - Calcula o tempo de dosagem do sanitizante (formula ? vai considerar o volume)
+  // 2.20 - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
+  // 2.21 - Ph em nível 7 interromper dosagem de sanitizante
+  // 2.22 - Mantém a agitação até PH interrupção de dosagem sanitizante
+  // 2.23 - Aciona HVK2
+  // 2.24 - Aciona PM2 se nível baixo
+  // 2.25 - PM2 desaciona quando Armazenamento Nivel alto || Ativos Nível Baixo
 
   /* Processo Tanque Final */
-  // 26 - Se !Nível alto && nível baixo Aciona H1 e RM2
-  // 27 - Se Nível alto Desaciona PM2
-  // 28 - Se !Nível baixo && !Nível alto para RM2 e H1
+  // 3.1 - Se !Nível alto && nível baixo Aciona H1 e RM2
+  // 3.2 - Se Nível alto Desaciona PM2
+  // 3.3 - Se !Nível baixo && !Nível alto para RM2 e H1
 
   /* Efluentes */
-  // 29 - Quando nível alto && (!Nível alto  && Nível baixo Armazenamento)
-  // 30 - Aciona PM3
-  // 31 - Se Armazenamento Nível alto || Efluentes Nível baixo
-  // 32 - Para PM3
+  // 4.1 - Quando nível alto && (!Nível alto  && Nível baixo Armazenamento)
+  // 4.2 - Aciona PM3
+  // 4.3 - Se Armazenamento Nível alto || Efluentes Nível baixo
+  // 4.4 - Para PM3
 
-  /* Processo Tanque Armazenamento 
+  /* ----- Processo Tanque Armazenamento ----- */
   // Tanque de armazenamento Enchendo
   if (etapaAtual == EtapaProcesso::Inicial) {
     if (tanqueArmazenamento.isNivelAlto()) {              // (* 1.1) Se nível alto
+      etapaAnterior = etapaAtual;                         // Atualiza a etapa anterior
       etapaAtual = EtapaProcesso::VerificNivelAltoArmaz;  // Muda a etapa do processo para "VerificNivelAltoArmaz"
       tempoArmazenamento = millis();                      // Armazena o tempo atual em milissegundos
     }
@@ -230,6 +250,7 @@ void loop() {
   if (etapaAtual == EtapaProcesso::VerificNivelAltoArmaz) {
     if (tanqueArmazenamento.isNivelAlto()) {
       if (millis() - tempoArmazenamento >= tempoDeVerificacao) {  // (* 1.2) Verifica se se passou 1 segundo desde o último acionamento
+        etapaAnterior = etapaAtual;                               // Atualiza a etapa anterior
         etapaAtual = EtapaProcesso::EsvaziandoTqArmaz;            // Muda a etapa do processo para "EsvaziandoTqArmaz"
         tanqueArmazenamento.ligaAtuador(0);                       // (* 1.2)Liga a bomba PM1 para transferir água para o tanque de ativos
       }
@@ -239,20 +260,81 @@ void loop() {
   // Esvaziando o tanque de armazenamento e controlando a bomba PM1
   if (etapaAtual == EtapaProcesso::EsvaziandoTqArmaz) {
     if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (* 1.3) Se nível baixo
+      etapaAnterior = etapaAtual;                                            // Atualiza a etapa anterior
       etapaAtual = EtapaProcesso::VerificTransferenciaAtivos;                // Muda a etapa do processo para "VerificTransferenciaAtivos"
       tempoArmazenamento = millis();                                         // Armazena o tempo atual em milissegundos para o tanque de ativos
     }
   }
 
+  // TODO: Verificar se vai esperar o tanque de ativos encher completamente ou se vai continuar o processo com o tanque de armazenamento vazio
+
   // Verificando se o tanque de armazenamento está vazio e controlando a bomba PM1
   if (etapaAtual == EtapaProcesso::VerificTransferenciaAtivos) {
     if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // Se nível alto
-      if (millis() - tempoArmazenamento >= tempoDeVerificacao) {             // (* 1.3) Verifica se se passou 1 segundo desde o último acionamento
-        tanqueArmazenamento.desligaAtuador(0);                               // (* 1.4) Desliga a bomba PM1 para interromper a transferência de água para o tanque de ativos
-        etapaAtual = EtapaProcesso::DosandoCoagulante;                       // Muda a etapa do processo para "DosandoCoagulante"
+      if (millis() - tempoArmazenamento >= tempoDeVerificacao) {             // (* 1.4, 2.1) Verifica se se passou 1 segundo desde o último acionamento
+        tanqueArmazenamento.desligaAtuador(0);                               // (* 1.5) Desliga a bomba PM1 para interromper a transferência de água para o tanque de ativos
+        tanqueAtivos.ligaAtuador(1);                                         // (* 2.2)Liga o misturador RM1 para iniciar a agitação da água no tanque de ativos
+
+        // TODO:  Calcular o tempo de dosagem do coagulante com base no pH da água do tanque de ativos
+        tempoDosagemCoagulante = 5000;  // (* 2.3) Calcula o tempo de dosagem do coagulante com base no pH da água do tanque de ativos
+        tempoDosagem = millis();        // Armazena o tempo atual em milissegundos
+
+        etapaAnterior = etapaAtual;                               // Atualiza a etapa anterior
+        etapaAtual = EtapaProcesso::VerificandoPhAposCoagulante;  // Muda a etapa do processo para "VerificandoPhAposCoagulante"
       }
     }
   }
 
-  // TODO: Verificar se caso o armazenamento chegue no nível baixo antes de encher o ativos e vice versa o que fazer*/
+  /* ----- Processo Tanque Ativos ----- */
+  /* Coagulação */
+  // Verificando o pH após a dosagem do coagulante
+  if (etapaAtual == EtapaProcesso::VerificandoPhAposCoagulante) {
+    // (* 2.5) Se o pH alvo foi atingido
+    if (tanqueAtivos.getPH() >= alvoPhCoagulante - histerese ||
+        tanqueAtivos.getPH() <= alvoPhCoagulante + histerese) {
+      etapaAnterior = etapaAtual;                        // Atualiza a etapa anterior
+      etapaAtual = EtapaProcesso::DosandoAlcalinizante;  // (* 2.6) Muda a etapa do processo para "DosandoAlcalinizante"
+      tempoDosagem = millis();                           // Armazena o tempo atual em milissegundos
+      tanqueAtivos.desligaAtuador(2);                    // (* 2.5) Pausa a dosagem para homogeneizar a quimica com a agua
+    } else {
+      if (tempoDosagemCoagulante < 500.0f) {  // Caso o tempo calculado para a dosagem não tenha sido suficiente para acertar o ph,
+        tempoDosagemCoagulante += 500.0f;     // adiciona mais 0.5s para
+      }
+      etapaAnterior = etapaAtual;                     // Atualiza a etapa anterior
+      etapaAtual = EtapaProcesso::DosandoCoagulante;  // (* 2.4) Muda a etapa do processo para "DosandoAlcalinizante"
+    }
+  }
+
+  // Dosando o coagulante e verificando parâmetros
+  if (etapaAtual == EtapaProcesso::DosandoCoagulante) {       // (* 2.4) Dosar um pouco de coagulante
+    tanqueAtivos.ligaAtuador(2);                              // Liga o dosador do coagulante
+    tempoDosagemCoagulante -= millis() / tempoDeVerificacao;  // Descontando o tempo de dosagem
+
+    if (millis() - tempoDosagem >= tempoDeVerificacao) {             // Após dosar uma pequena quantidade de coagulante
+      etapaAnterior = EtapaProcesso::VerificandoPhAposCoagulante;    // Atualiza a etapa anterior
+      etapaAtual = EtapaProcesso::Homogeneizando;                    // Muda a etapa do processo indicando a mistura do coagulante
+      tempoDosagem = millis();                                       // Armazena o tempo atual em milissegundos
+    } else if (millis() - tempoDosagem >= tempoDosagemCoagulante) {  // ou caso se passe o tempo máximo de dosagem
+      etapaAnterior = etapaAtual;                                    // Atualiza a etapa anterior
+      etapaAtual = EtapaProcesso::VerificandoPhAposCoagulante;       // Muda a etapa do processo para verificar
+    }
+  }
+
+  // Mistura dos quimicos
+  if (etapaAtual == EtapaProcesso::Homogeneizando) {  // (* 2.4) Homogeneizar por um tempo
+    tanqueAtivos.desligaAtuador(2);                   // Pausa a dosagem para homogeneizar a quimica com a agua
+    tanqueAtivos.desligaAtuador(3);                   // Pausa a dosagem para homogeneizar a quimica com a agua
+    tanqueAtivos.desligaAtuador(4);                   // Pausa a dosagem para homogeneizar a quimica com a agua
+
+    if (millis() - tempoDosagem >= tempoMistura) {
+      tempoDosagem = millis();     // Armazena o tempo atual em milissegundos
+      etapaAtual = etapaAnterior;  // Se o tempo de mistura foi atingido, retorna para a última etapa
+    }
+  }
+
+  /* Alcalinização */
+  // TODO: Implementar Alcalinização (* 2.6)
+
+  /* Sanitização */
+  // TODO: Implementar Sanitização
 }
