@@ -154,7 +154,7 @@ int tempoMistura = 5000;        // Intervalo após dosagem de quimica para homog
 float tempoDosagemCoagulante = 5000.0f;        // Tempo de dosagem do coagulante em milissegundos
 float tempoDosagemAlcalinizante = 5000.0f;     // Tempo de dosagem do alcalinizante em milissegundos
 float tempoDosagemSanitizante = 5000.0f;       // Tempo de dosagem do sanitizante em milissegundos
-float tempoEsperaCoagulação = 3000000.0f;      // Tempo de espera para que a coagulação aconteça
+float tempoEsperaCoagulacao = 3000000.0f;      // Tempo de espera para que a coagulação aconteça
 float tempoTransferenciaEfluentes = 30000.0f;  // Tempo que a bomba de transferencia do tanque de ativos fica ligada ao esvaziar o decantado para o tanque de efluentes
 
 unsigned long tempoArmazenamento = 0;  // Variável para armazenar o inicio da contagem do tanque de armazenamento
@@ -385,7 +385,7 @@ void loop() {
   }
 
   if (etapaAtual == EtapaProcesso::Coagulacao) {                // (* 2.12) Inicio da coagulação
-    if (millis() - tempoCoagulacao >= tempoEsperaCoagulação) {  // (* 2.14) pausa a agitação por 5m
+    if (millis() - tempoCoagulacao >= tempoEsperaCoagulacao) {  // (* 2.14) pausa a agitação por 5m
       tempoAtivos = millis();                                   // Atualiza o tempo atual em milissegundos
       etapaAnterior = etapaAtual;                               // Atualiza a etapa anterior
       etapaAtual = EtapaProcesso::PreparandoLibercaoEfluentes;  // (* 2.15) Muda a etapa do processo para "PreparandoLibercaoEfluentes
