@@ -75,21 +75,21 @@
 
 // Enumeração para representar as etapas do processo de tratamento de água
 enum class EtapaProcesso {
-  Inicial,
-  VerificNivelAltoArmaz,
-  EsvaziandoTqArmaz,
-  VerificTransferenciaAtivos,
-  DosandoCoagulante,
-  VerificandoPhAposCoagulante,
-  Homogeneizando,
-  VerificNivelBaixoAtivos,
-  DosandoAlcalinizante,
-  Coagulacao,
-  RemovendoSedimentos,
-  DosandoSanitizante,
-  EsvaziandoTanqueAtivos,
-  TratamentoUv,
-  Finalizado
+  Inicial,                      // Etapa inicial do processo
+  VerificNivelAltoArmaz,        // Verificação do nível alto do tanque de armazenamento de água bruta
+  EsvaziandoTqArmaz,            // Esvaziamento do tanque de armazenamento
+  VerificTransferenciaAtivos,   // Verificação do nível do tanque de ativos
+  DosandoCoagulante,            // Dosagem do coagulante
+  VerificandoPhAposCoagulante,  // Verificação de pH após dosagem de coagulante
+  Homogeneizando,               // Homogeneizando mistura de químicos
+  VerificNivelBaixoAtivos,      // Verificando nível do tanque de ativos
+  DosandoAlcalinizante,         // Dosagem de alcalinizante
+  Coagulacao,                   // Aguardando a coagulação e decantação dos flocos
+  RemovendoSedimentos,          // Removendo sedimentos do tanque de ativos
+  DosandoSanitizante,           // Dosagem de sanitizante
+  EsvaziandoTanqueAtivos,       // Esvaziamento do tanque de ativos
+  TratamentoUv,                 // Tratamento com luz UV
+  Finalizado                    // Processo finalizado
 };
 
 EtapaProcesso etapaAtual = EtapaProcesso::Inicial;     // Variável para armazenar a etapa atual do processo
