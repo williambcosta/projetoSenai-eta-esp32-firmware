@@ -66,9 +66,9 @@
 #define PIN_RM2_FINAL "0.6"  // Pino do misturador do tanque final
 
 // Dosadores
-#define PIN_DOSADOR_CLORETO "0.7"      // Pino do dosador de cloreto
-#define PIN_DOSADOR_CARBONATO "1.0"    // Pino do dosador de carbonato
-#define PIN_DOSADOR_HIPOCLORITO "1.1"  // Pino do dosador de hipoclorito
+#define PIN_DOSADOR_FeCl3_DM1 "0.7"  // Pino do dosador de cloreto
+#define PIN_DOSADOR_CaCO3_DM2 "1.0"  // Pino do dosador de carbonato
+#define PIN_DOSADOR_NaClO_DM3 "1.1"  // Pino do dosador de hipoclorito
 
 // Lâmpadas
 #define PIN_LAMPADA_UV "1.2"  // Pino da lâmpada UV
@@ -116,13 +116,13 @@ SensorPH phAtivos = SensorPH(PIN_PH_ATIVOS, 4.0f, 3705.5, 3105.0f, 10.0f, 2684.0
 // Atuadores
 std::vector<SaidaDigital> saidasAtivos = {
     // Indices
-    SaidaDigital(PIN_BOMBA_PM2),            // 0 - Bomba de teansferencia do tanque de ativos para tanque final/efluentes
-    SaidaDigital(PIN_RM1_ATIV),             // 1 - Mexedor
-    SaidaDigital(PIN_DOSADOR_CLORETO),      // 2 - Coagulante
-    SaidaDigital(PIN_DOSADOR_CARBONATO),    // 3 - Alcalinizante
-    SaidaDigital(PIN_DOSADOR_HIPOCLORITO),  // 4 - Sanitizante
-    SaidaDigital(PIN_SOL_EFLU),             // 5 - Solenoide de controle de fluxo para efluentes
-    SaidaDigital(PIN_SOL_FINAL)             // 6 - Solenoide de controle de fluxo para tanque final
+    SaidaDigital(PIN_BOMBA_PM2),          // 0 - Bomba de teansferencia do tanque de ativos para tanque final/efluentes
+    SaidaDigital(PIN_RM1_ATIV),           // 1 - Mexedor
+    SaidaDigital(PIN_DOSADOR_FeCl3_DM1),  // 2 - Coagulante
+    SaidaDigital(PIN_DOSADOR_CaCO3_DM2),  // 3 - Alcalinizante
+    SaidaDigital(PIN_DOSADOR_NaClO_DM3),  // 4 - Sanitizante
+    SaidaDigital(PIN_SOL_EFLU),           // 5 - Solenoide de controle de fluxo para efluentes
+    SaidaDigital(PIN_SOL_FINAL)           // 6 - Solenoide de controle de fluxo para tanque final
 };
 
 // Instancia
@@ -203,26 +203,26 @@ void loop() {
   // * Nível baixo sempre manda 1
   // * Dosadores 2 ml/s
 
-  /* Processo Tanque Armazenamento */
-  // 1.1 - Se nível alto...
-  // 1.2 - ...por 1s liga bomba PM1
-  // 1.3 - Se nível baixo por 1s tanque armazenamento em qualquer momento do processo...
-  // 1.4 - PM1 ativo até tanque ativos nível alto por 1s
-  // 1.5 - ...desliga PM1
+  /** Processo de tratamento **/
+  /* Tanque de Armazenamento */
+  // 1.1 ...................... Inicial - Se nível alto --------------------------------> VerificNivelAltoArmaz
+  // 1.2 ........ VerificNivelAltoArmaz - Por 1s, liga bomba PM1 -----------------------> EsvaziandoTqArmaz
+  // 1.3 ............ EsvaziandoTqArmaz - Se nível baixo || Tanque ativos nível alto ---> VerificTransferenciaAtivos
+  // 1.4 ... VerificTransferenciaAtivos - Por 1s, Desliga PM1, Liga RM1 ----------------> DosandoCoagulante
 
-  /* Processo Tanque Ativos */
-  //- Coagulante -//
-  // 2.1 - Nível alto && nível baixo tanque ativos por 1s
-  // 2.2 - Inicia agitação RM1
-  // 2.3 - Calcula o tempo de dosagem do coagulante (formula ? vai considerar o ph)
-  // 2.4 - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
-  // 2.5 - Ph em nível X interromper dosagem de coagulante
+  /* Tanque Ativos */
+  // Dosagem Coagulante //
+  // 2.1 ................ DosandoCoagulante - Liga DM1 por 1s || Se tempoDosagem >= tempoDosagemCoagulante
+  // 2.2 ................ DosandoCoagulante - Desliga DM1
+  // 2.3 ................ DosandoCoagulante - Se pH < que (6 - histerese) -----------------------------------> DosandoAlcalinizante
+  // 2.4 ................ DosandoCoagulante - Se tempoDosagem >= tempoDosagemCoagulante
+  // 2.5 ................ DosandoCoagulante - Se pH >= (alvoPH - histerese) || pH <= (alvoPH + histerese) ---> PreparaCoagulacao
+  // 2.6 ............. DosandoAlcalinizante - Ligar Dosador DM2
+  // 2.7 ............. DosandoAlcalinizante - DM2 ligado por 1s, desliga DM2 --------------------------------> VerificandoPhAposAlcalinizante
+  // 2.8 ... VerificandoPhAposAlcalinizante - Se pH >= (alvoPH - histerese) || pH <= (alvoPH + histerese) ---> DosandoCoagulante
 
-  //- Alcalinizante -//
-  // 2.6 - Inicia dosagem de alcalinizante
-  // 2.7 - Calcula o tempo de dosagem do alcalinizante (formula ? vai considerar o ph)
-  // 2.8 - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
-  // 2.9 - Ph em nível X interromper dosagem de alcalinizante
+  // Coagulação //
+  // PreparaCoagulacao -
 
   //- Coagulação -//
   // 2.10 - Prepara a coagulação
@@ -306,6 +306,7 @@ void loop() {
   /* ----- Processo Tanque Ativos ----- */
   /* Coagulação */
   // Verificando o pH após a dosagem do coagulante
+  // TODO: Vai mudar
   if (etapaAtual == EtapaProcesso::VerificandoPhAposCoagulante) {
     // (* 2.5) Se o pH alvo foi atingido
     if (tanqueAtivos.getPH() >= alvoPhCoagulante - histerese ||
@@ -340,7 +341,7 @@ void loop() {
   }
 
   /* Alcalinização */
-  // TODO: Implementar Alcalinização (* 2.6)
+  // TODO: Implementar Alcalinização (* 2.6) - Vai sair
   // Verificando o pH após a dosagem do alcalinizante
   if (etapaAtual == EtapaProcesso::VerificandoPhAposAlcalinizante) {
     // (* 2.9) Se o pH alvo foi atingido
@@ -428,4 +429,17 @@ void loop() {
       etapaAtual = etapaAnterior;  // Se o tempo de mistura foi atingido, retorna para a última etapa
     }
   }
+
+  /* TODO: Não haverá mais o calculo de coagulante, será feito um teste para determinar a quantidade mais adequada
+   *  portanto tempoDosagemCoagulante será um valor constante determinado como variável global
+   *  item 2.3 não sera mais utilizado (linha 297)
+   */
+
+  /* TODO: Dosagem de alcalinizante não dependerá de tempo (item 2.7 linha 315) e sim da medição de pH.
+   *  Dosar alcalinizante até ph 7
+   */
+
+  /* TODO: Dosagem de coagulante e alcalinizante andarão juntas. Caso o ph durante a dosagem de coagulante ficar menor que 6
+   *  pausa dosagem de coagulante e dosa alcalinizante mantendo ele próximo de 7
+   */
 }
