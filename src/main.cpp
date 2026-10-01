@@ -58,8 +58,8 @@
 #define PIN_BOMBA_PM3 "0.2"  // Pino da bomba de retorno para tanque de armazenamento
 
 // Solenoides
-#define PIN_SOL_EFLU "0.3"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
-#define PIN_SOL_FINAL "0.4"  // Pino da solenoide de controle de fluxo para o tanque final
+#define PIN_SOL_EFLU_HVK1 "0.3"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
+#define PIN_SOL_FINAL_HVK2 "0.4"  // Pino da solenoide de controle de fluxo para o tanque final
 
 // Misturadores
 #define PIN_RM1_ATIV "0.5"   // Pino do misturador do tanque de ativos
@@ -75,24 +75,23 @@
 
 // Enumeração para representar as etapas do processo de tratamento de água
 enum class EtapaProcesso {
-  Inicial,                      // Etapa inicial do processo, indica que o tanque de armazenamento esta enchendo
-  VerificNivelAltoArmaz,        // Verificação do nível alto do tanque de armazenamento de água bruta
-  EsvaziandoTqArmaz,            // Esvaziamento do tanque de armazenamento
-  VerificTransferenciaAtivos,   // Verificação do nível do tanque de ativos
-  DosandoCoagulante,            // Dosagem do coagulante
-  VerificandoPh,                // Verificação de pH após dosagem de coagulante
-  DosandoAlcalinizante,         // Dosagem de alcalinizante
-  DosandoSanitizante,           // Dosagem de sanitizante
-  PreparaCoagulacao,            // Continua a homogeinização antes da coagulação e decantação dos flocos
-  Coagulacao,                   // Aguardando a coagulação e decantação dos flocos
-  Homogeneizando,               // Homogeneizando mistura de químicos
-  PreparandoLibercaoEfluentes,  // Preparando para liberar o decantado para o tanque de efluentes
-  LiberandoEfluentes,           // Liberando o decantado para o tanque de efluentes
-  VerificNivelBaixoAtivos,      // Verificando nível do tanque de ativos
-  RemovendoSedimentos,          // Removendo sedimentos do tanque de ativos
-  EsvaziandoTanqueAtivos,       // Esvaziamento do tanque de ativos
-  TratamentoUv,                 // Tratamento com luz UV
-  Finalizado                    // Processo finalizado
+  Inicial,                       // Etapa inicial do processo, indica que o tanque de armazenamento esta enchendo
+  VerificNivelAltoArmaz,         // Verificação do nível alto do tanque de armazenamento de água bruta
+  EsvaziandoTqArmaz,             // Esvaziamento do tanque de armazenamento
+  VerificTransferenciaAtivos,    // Verificação do nível do tanque de ativos
+  DosandoCoagulante,             // Dosagem do coagulante
+  VerificandoPh,                 // Verificação de pH após dosagem de coagulante
+  DosandoAlcalinizante,          // Dosagem de alcalinizante
+  DosandoSanitizante,            // Dosagem de sanitizante
+  PreparaCoagulacao,             // Continua a homogeinização antes da coagulação e decantação dos flocos
+  Coagulacao,                    // Aguardando a coagulação e decantação dos flocos
+  Homogeneizando,                // Homogeneizando mistura de químicos
+  PreparandoLibercaoSedimentos,  // Preparando para liberar o decantado para o tanque de efluentes
+  RemovendoSedimentos,           // Removendo sedimentos do tanque de ativos
+  PreparandoEsvaziamentoAtivos,  // Preparando para liberar a agua tratada para o tanque final
+  EsvaziandoTanqueAtivos,        // Esvaziamento do tanque de ativos
+  TratamentoUv,                  // Tratamento com luz UV
+  Finalizado                     // Processo finalizado
 };
 
 EtapaProcesso etapaAtual = EtapaProcesso::Inicial;     // Variável para armazenar a etapa atual do processo
@@ -119,8 +118,8 @@ std::vector<SaidaDigital> saidasAtivos = {
     SaidaDigital(PIN_DOSADOR_FeCl3_DM1),  // 2 - Coagulante
     SaidaDigital(PIN_DOSADOR_CaCO3_DM2),  // 3 - Alcalinizante
     SaidaDigital(PIN_DOSADOR_NaClO_DM3),  // 4 - Sanitizante
-    SaidaDigital(PIN_SOL_EFLU),           // 5 - Solenoide de controle de fluxo para efluentes
-    SaidaDigital(PIN_SOL_FINAL)           // 6 - Solenoide de controle de fluxo para tanque final
+    SaidaDigital(PIN_SOL_EFLU_HVK1),      // 5 - Solenoide de controle de fluxo para efluentes
+    SaidaDigital(PIN_SOL_FINAL_HVK2)      // 6 - Solenoide de controle de fluxo para tanque final
 };
 
 // Instancia
@@ -159,8 +158,10 @@ int tempoCoagulacao = 3000000;         // Tempo de espera para que a coagulaçã
 // Temporizadores
 unsigned long dtDosagemCoagulante = 0;     // Tempo percorrido de dosagem de coagulante
 unsigned long dtDosagemAlcalinizante = 0;  // Tempo percorrido de dosagem de alcalinizante
+unsigned long dtDosagemSanitizante = 0;    // Tempo percorrido de dosagem de sanitizante
 unsigned long dtDescargaEfluentes = 0;     // Tempo percorrido de descarga dos efluentes
 unsigned long dtArmazenamento = 0;         // Tempo percorrido de verificação do tanque de armazenamento
+unsigned long dtAtivos = 0;                // Tempo percorrido de verificação do tanque de ativos
 unsigned long dtHomogeneizacao = 0;        // Tempo percorrido de homogeneização de quimicos
 unsigned long dtCoagulacao = 0;            // Tempo percorrido de coagulação dos residuos do tanque de ativos
 
@@ -192,6 +193,7 @@ void setup() {
 
   Serial.begin(115200);  // Inicializa a comunicação serial
 }
+
 /* ----- Loop principal ----- */
 void loop() {
   // TODO: Implementar alertas
@@ -254,25 +256,31 @@ void loop() {
   // 7.5 - Se tempo de verificação, Acionando PM2, atualiza temporizador de descarga -------------> LiberandoEfluentes
 
   // Liberando Efluentes //
-  // 7.6 - Manter PM2 por tempo de descarga
-  // 7.7 - Desaciona HVK1, PM2 e Iniciar agitação (RM1)
+  // 7.6 - Manter PM2 até tempo de descarga
+  // 7.7 - Desaciona HVK1, PM2 e
+  // 7.8 - Atualiza o temporizador de dosagem de sanitizante e Iniciar agitação (RM1) ------------> DosandoSanitizante
 
   // Dosagem de Sanitizante //
-  //  - Calcula o tempo de dosagem do sanitizante (formula ? vai considerar o volume)
-  //  - Dosar um pouco por vez e medir o ph após pausa na dosagem de ?s
-  //  - Ph em nível 7 interromper dosagem de sanitizante
-  //  - Mantém a agitação até PH interrupção de dosagem sanitizante
-  //  - Aciona HVK2
-  //  - Aciona PM2 se nível baixo
-  //  - PM2 desaciona quando Armazenamento Nivel alto || Ativos Nível Baixo
+  // 8.1 - Se o tempo de dosagem atingir tempo de dosagem total
+  // 8.2 - Desliga Dosador DM3
+  // 8.3 - Atualiza temporizador de transferencia para tanque final
+  // 8.4 - Aciona HVK2 ---------------------------------------------------------------------------> PreparandoEsvaziamentoAtivos
+
+  // Preparando Transferencia para Tanque Final //
+  // 8.5 - Se tempo de verificação alcancado
+  // 8.6 - Se tanque final nivel baixo, Aciona PM2 ------------------------------------------------> EsvaziandoTanqueAtivos
 
   /* Tanque Final */
-  //  - Se !Nível alto && nível baixo Aciona H1 e RM2
-  //  - Se Nível alto Desaciona PM2
-  //  - Se !Nível baixo && !Nível alto para RM2 e H1
+  //  - Se Tanque ativos nivel baixo || Tanque final nivel alto
+  //  - Desaciona RM1, Desaciona PM2 e Desaciona HVK2
+  
+  /* Condições sem etapa */
+  // Tanque final //
+  //  - Se Tanque final nivel alto, Aciona H1 e RM2
+  //  - Caso contrario desliga H1 e RM2
 
-  /* Efluentes */
-  //  - Quando nível alto && (!Nível alto  && Nível baixo Armazenamento)
+  // Efluentes // 
+  //  - Quando nível alto && (!Nível alto armazenamento)
   //  - Aciona PM3
   //  - Se Armazenamento Nível alto || Efluentes Nível baixo
   //  - Para PM3
@@ -375,12 +383,12 @@ void loop() {
   }
 
   /* Coagulação */
-  if (etapaAtual == EtapaProcesso::Coagulacao) {                  // Aguardando coagulação dos sólidos
-    if (millis() - dtCoagulacao >= tempoCoagulacao) {             // (7.1) Aguarda o tempo determinado de coagulação antes de seguir com o processo
-      if (tanqueAtivos.getTurbidez() <= alvoNtu) {                // (7.2) Alvo de ntu atingido
-        tanqueAtivos.ligaAtuador(5);                              // (7.2) Aciona HVK1
-        dtDescargaEfluentes = millis();                           // (7.3) Atualiza o temporizador de descarga de efluentes
-        etapaAtual = EtapaProcesso::PreparandoLibercaoEfluentes;  // (-> 7.3) Muda a etapa do processo para "PreparandoLibercaoEfluentes
+  if (etapaAtual == EtapaProcesso::Coagulacao) {                   // Aguardando coagulação dos sólidos
+    if (millis() - dtCoagulacao >= tempoCoagulacao) {              // (7.1) Aguarda o tempo determinado de coagulação antes de seguir com o processo
+      if (tanqueAtivos.getTurbidez() <= alvoNtu) {                 // (7.2) Alvo de ntu atingido
+        tanqueAtivos.ligaAtuador(5);                               // (7.2) Aciona HVK1
+        dtDescargaEfluentes = millis();                            // (7.3) Atualiza o temporizador de descarga de efluentes
+        etapaAtual = EtapaProcesso::PreparandoLibercaoSedimentos;  // (-> 7.3) Muda a etapa do processo para "PreparandoLibercaoSedimentos
       }
 
       // TODO: Else{ talvez nova dosagem de coagulante}
@@ -388,24 +396,54 @@ void loop() {
   }
 
   /* Efluentes */
-  if (etapaAtual == EtapaProcesso::PreparandoLibercaoEfluentes) {
+  if (etapaAtual == EtapaProcesso::PreparandoLibercaoSedimentos) {
     if (millis() - dtDescargaEfluentes >= tempoDescargaEfluentes) {  // (7.6) Aguarda tempo de transferencia
       tanqueAtivos.ligaAtuador(0);                                   // (7.5) Liga bomba de transferencia
       dtDescargaEfluentes = millis();                                // (7.5) Atualiza o tempo atual em milissegundos
-      etapaAtual = EtapaProcesso::LiberandoEfluentes;                // (-> 7.5) Muda a etapa do processo para "LiberandoEfluentes
+      etapaAtual = EtapaProcesso::RemovendoSedimentos;               // (-> 7.5) Muda a etapa do processo para "RemovendoSedimentos
     }
   }
 
-  if (etapaAtual == EtapaProcesso::LiberandoEfluentes) {
+  if (etapaAtual == EtapaProcesso::RemovendoSedimentos) {
     if (millis() - dtDescargaEfluentes >= tempoDescargaEfluentes) {  // (7.6) Aguarda tempo de transferencia
       tanqueAtivos.desligaAtuador(0);                                // (7.7) Desliga bomba
       tanqueAtivos.desligaAtuador(5);                                // (7.7) Desliga solenoide
       tanqueAtivos.ligaAtuador(1);                                   // (7.7) Liga Agitação
+      dtDosagemSanitizante = millis();                               // (7.8) Atualiza temporizador de dosagem de sanitizante
+      etapaAtual = EtapaProcesso::DosandoSanitizante;                // (-> 7.8) Muda etapa do processo para "DosandoSanitizante"
     }
   }
 
   /* Sanitização */
-  // TODO: Implementar Sanitização
+  if (etapaAtual == EtapaProcesso::DosandoSanitizante) {                 // Dosando o sanitizante e verificando parâmetros
+    if ((millis() - dtDosagemSanitizante) >= tempoDosagemSanitizante) {  // (8.1) Se o tempo total de dosagem do sanitizante for alcançado
+      tanqueAtivos.desligaAtuador(4);                                    // (8.2) Desliga o dosador de sanitizante
+      dtAtivos = millis();                                               // (8.3) Atualiza temporizador
+      tanqueAtivos.ligaAtuador(6);                                       // (8.4) Aciona Solenoide de transferencia para o tanque final
+      controleEtapa = EtapaProcesso::PreparandoEsvaziamentoAtivos;       // (-> 8.4) Atualiza controle de etapa do processo
+    }
+  }
+
+  /* Transferencia para tanque final */
+  if (etapaAtual == EtapaProcesso::PreparandoEsvaziamentoAtivos) {  // Preparando para transferir
+    if (millis() - dtAtivos >= tempoDeVerificacao) {                // (8.5) Se tempo de verificação atingido
+      if (tanqueFinal.isNivelBaixo()) {                             // (8.6) Se tanque final em nível baixo
+        tanqueAtivos.ligaAtuador(0);                                // (8.6) Liga bomba de transferencia
+        etapaAtual = EtapaProcesso::EsvaziandoTanqueAtivos;         // (-> 8.6) Muda etapa do processo para EsvaziandoTanqueAtivos
+      }
+    }
+  }
+
+
+  /* Condições sem etapa específica */
+  if (etapaAtual == EtapaProcesso::EsvaziandoTanqueAtivos) {
+    if (tanqueAtivos.isNivelBaixo() || tanqueFinal.isNivelAlto()) {
+
+    }
+  }
+
   // TODO: Implementar Descarga para o tanque final
   // TODO: Implementar Tanque de efluentes
+  // TODO: Ação de interromper as bombas deve acontecer fora de uma etapa específica. Verificar encessidade de usar controle de 
+  // TODO: processo ou somente seguir para a próxima etapa resolve
 }

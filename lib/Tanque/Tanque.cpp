@@ -4,8 +4,10 @@
  * O método begin deve ser chamado para configurar os pinos dos sensores de nível. Isso deve ser feito dentro, ou após, da função setup()
  * Isso garante que nenhuma operação com GPIOs seja executada antes da inicialização completa da placa.
  * 
- * Os pinos dos sensores são configurados como INPUT_PULLUP, o que significa que o pino espera nível lógico HIGH o tempo todo que o sensor
- * estiver em estado normal. Caso ativado ele deve mudar de nível para LOW.
+ * Os pinos dos sensores são configurados como INPUT_PULLUP. Para garantir segurança o sensor deverá inverter a lógica de acionamento
+ * caso o nível não seja atingido o sensor deve chavear o negativo enviando nivel lógico LOW no esp. Isso garante que, caso um fio rompa,
+ * o esp sempre receberá HIGH indicando que o nível está alto, por exemplo, interrompendo a transferencia de um tanque para outro
+ * evitando transbordo.
  * 
  * Como o esp já possue resistor de pull up na maioria das entradas, basta ligar o sensor no gnd e o retorno no pino específico.
  * 
@@ -26,12 +28,12 @@ Tanque::Tanque(const std::vector<SaidaDigital>& atuadores, uint8_t pinoNivelAlto
 
 // Função que indica se o nível da água do tanque está alto
 bool Tanque::isNivelAlto() {
-  return digitalRead(this->pinoNivelAlto) == LOW && digitalRead(this->pinoNivelBaixo) == LOW;
+  return digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == HIGH;
 }
 
 // Função que indica se o tanque está vazio
 bool Tanque::isNivelBaixo() {
-  return digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == HIGH;
+  return digitalRead(this->pinoNivelAlto) == LOW && digitalRead(this->pinoNivelBaixo) == LOW;
 }
 
 /**
@@ -39,7 +41,7 @@ bool Tanque::isNivelBaixo() {
  * estiver acionado e o baixo não, mas pode ser útil para identificar problemas.
  */
 bool Tanque::isFalhaSensores() {
-  if (digitalRead(this->pinoNivelAlto) == LOW && digitalRead(this->pinoNivelBaixo) == HIGH) {
+  if (digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == LOW) {
     return true;
   }
 
