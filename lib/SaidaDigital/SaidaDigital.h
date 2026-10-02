@@ -26,7 +26,8 @@ class SaidaDigital {
   SaidaDigital(uint8_t byteSaida, uint8_t bitSaida);
   SaidaDigital(uint8_t byteSaida, uint8_t bitSaida, uint8_t nivelAtuacao);
 
-  bool getStatus();  // Retorna o estado atual do SaidaDigital. TRUE = ligado, FALSE = desligado
+  bool getStatus();  // Retorna o estado atual do SaidaDigital. TRUE = ligado, FALSE = desligado. Não representanecessáriamente se o atuador esta funcionando, para isso use a função isAtuado() 
+  bool isAtuado();   // Função responsável por verificar se a saída está atuada (ligada) levando em consideração o nível lógico de atuação definido. 
 
   void liga();                                 // Função responsável por ligar o SaidaDigital
   void desliga();                              // Função responsável por desligar o SaidaDigital

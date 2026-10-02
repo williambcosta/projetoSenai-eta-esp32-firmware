@@ -16,60 +16,53 @@ MqttManager::MqttManager(const char* ssid, const char* wifiSenha, const char* se
   _instance = this;             // Salva esta instância para o callback estático usar
 }
 
-// Função para configurar a conexão Wi-Fi
+// Função para configurar e conectar ao Wi-Fi
 void MqttManager::setupWifi() {
-  // TODO: Seria interessante implementar uma lógica para alterar a rede e senha caso não fosse possível a conexão, mas não tenho tempo pra isso
+  if (WiFi.status() == WL_CONNECTED) return;
 
-  if (WiFi.status() == WL_CONNECTED) return;  // Caso a placa já esteja conectada retorna sem fazer nada
-
-  Serial.print("\nConectando em ");
+  // Dispara a tentativa de conexão sem aguardar em loop bloqueante
+  Serial.print("\nIniciando conexão Wi-Fi em ");
   Serial.println(wifi_ssid);
-
-  WiFi.begin(wifi_ssid, wifi_senha);  // Tenta se conectar
-
-  while (WiFi.status() != WL_CONNECTED) {  // Verifica o status da conexão enquanto ela não for estabelecida
-    delay(500);                            // aguarda meio segundo para verificar novament o status da conexão
-    Serial.print(".");
-  }
-
-  Serial.println("\nWi-Fi conectado!");
+  WiFi.begin(wifi_ssid, wifi_senha);
 }
 
-// Função para reconectar ao servidor MQTT caso a conexão seja perdida
+// Função para reconectar ao servidor MQTT caso a conexão seja perdida. Tenta apenas uma vez para evitar travar o loop principal caso não consiga se conectar
 void MqttManager::reconnect() {
-  while (!client.connected()) {
-    setupWifi();  // Garante que o Wi-Fi está ligado antes de tentar o MQTT
+  // Verifica Wi-Fi de forma assíncrona
+  if (WiFi.status() != WL_CONNECTED) {
+    setupWifi();
+    return;  // Retorna imediatamente para não bloquear a malha principal de segurança
+  }
 
+  // Se Wi-Fi está OK, tenta conectar ao MQTT Broker
+  if (!client.connected()) {
+    String clientId = "ESP32-ETA-" + String((uint32_t)ESP.getEfuseMac(), HEX);
     Serial.print("Tentando conexão MQTT com HiveMQ...");
-    String clientId = "espclient";
 
-    // Tenta se conectar ao servidor
     if (client.connect(clientId.c_str(), mqtt_usuario, mqtt_senha)) {
       Serial.println("conectado!");
-
-      // Se houver um tópico para assinar, assina automaticamente
       if (mqtt_topico_comandos != nullptr) {
         client.subscribe(mqtt_topico_comandos);
       }
-
-    } else {  // Caso não consiga se conectar espera 5 segundos para tentar novamente
-      Serial.print("falhou, rc=");
-      Serial.print(client.state());
-      Serial.println(" Reconectando em 5 segundos...");
-
-      delay(5000);
+    } else {
+      Serial.print("Falha: ");
+      Serial.println(client.state());
     }
   }
 }
 
 // Função para iniciar a conexão Wi-Fi e configurar o cliente MQTT
-void MqttManager::begin(const char* topicoComandos, const char* topicoDados, const char* topicoAlertas) {
+void MqttManager::begin(const char* topicoComandos, const char* topicoTelemetria, const char* topicoAlertas) {
   mqtt_topico_comandos = topicoComandos;
-  mqtt_topico_dados = topicoDados;
+  mqtt_topico_telemetria = topicoTelemetria;
   mqtt_topico_alertas = topicoAlertas;
+
+  setupWifi();  // Configura a conexão Wi-Fi
+
   espClient.setInsecure();                        // Não valida a conexão, apenas aceita o que recebe. Para o nosso fim é o suficiente
   client.setServer(mqtt_servidor, mqtt_porta);    // Configura o servidor
   client.setCallback(MqttManager::mqttCallback);  // Configura o callback responsável pelo recebimento das mensagens
+  client.setBufferSize(1024);                     // Configura o tamanho do buffer para receber mensagens maiores
 
   ultimaMsg.reserve(51);
 }
@@ -83,23 +76,29 @@ void MqttManager::mqttCallback(char* topico, byte* mensagem, unsigned int tamanh
 
 // Função que processa a mensagem recebida
 void MqttManager::handleMsg(char* topico, byte* mensagem, unsigned int tamanho) {
-  String menssagem = "";
+  static String msg = "";
+  msg.reserve(1024);  // Reserva espaço para a mensagem recebida
+  msg = "";           // Limpa a mensagem para receber a nova
   for (int i = 0; i < tamanho; i++) {
-    menssagem += (char)mensagem[i];
+    msg += (char)mensagem[i];
   }
 
-  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, menssagem.c_str());
-
-  ultimaMsg = menssagem;
+  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, msg.c_str());
+  ultimaMsg = msg;
 }
 
 // Função que deve ser chamada no loop principal para manter a conexão
 void MqttManager::handle() {
-  if (!client.connected()) {  // Caso o cliente não esteja conectado
-    reconnect();              // Reconecta
+  if (client.connected()) {
+    client.loop();
+  } else {
+    // Tenta reconectar apenas quando transcorrer o intervalo especificado
+    unsigned long agora = millis();
+    if (agora - ultimoIntervaloReconexao >= intervaloReconexao) {
+      ultimoIntervaloReconexao = agora;
+      reconnect();
+    }
   }
-
-  client.loop();  // Itera a conexão MQTT, verifica novas mensagens, envia as pendentes e mantém a conexão ativa
 }
 
 // Função para publicar mensagens em um tópico específico
@@ -107,7 +106,10 @@ bool MqttManager::publish(uint8_t topico, const char* mensagem) {
   if (!client.connected()) return false;  // Caso não esteja conectado não faz nada
 
   // Seleciona o tópico correto baseado no parâmetro recebido
-  const char* topicoSelecionado = (topico == TOPICO_DADOS) ? mqtt_topico_dados : ((topico == TOPICO_COMANDOS) ? mqtt_topico_comandos : mqtt_topico_alertas);
+  const char* topicoSelecionado = (topico == TOPICO_TELEMETRIA) ? mqtt_topico_telemetria : ((topico == TOPICO_COMANDOS) ? mqtt_topico_comandos : mqtt_topico_alertas);
+
+  // Proteção contra ponteiro nulo caso o tópico não tenha sido definido
+  if (topicoSelecionado == nullptr) return false;
 
   if (client.publish(topicoSelecionado, mensagem)) {  // Tenta publicar a mensagem
     // Caso bem sucedida loga a saida e retorna true sinalizando o sucesso
@@ -120,4 +122,9 @@ bool MqttManager::publish(uint8_t topico, const char* mensagem) {
   } else {  // Caso contrario sinaliza a falha retornando false
     return false;
   }
+}
+
+// Função para verificar se o cliente MQTT está conectado ao servidor
+bool MqttManager::isConnected() {
+  return client.connected();  // Retorna o estado da conexão com o servidor MQTT
 }

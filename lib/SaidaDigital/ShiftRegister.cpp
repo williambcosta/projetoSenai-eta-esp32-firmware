@@ -19,6 +19,8 @@ void ShiftRegister::begin(uint8_t dataPin, uint8_t clockPin, uint8_t latchPin) {
   pinMode(dataPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(latchPin, OUTPUT);
+
+  atualizarSaidas();
 }
 
 // Define se as saídas devem ser atualizadas automaticamente após cada alteração
@@ -46,7 +48,6 @@ void ShiftRegister::setSaida(uint8_t byteIndex, uint8_t bitIndex, bool valor) {
 void ShiftRegister::setSaida(std::string saida, bool valor) {
   uint8_t byteIndex = saida[0] - '0';           // Converte o caractere do byte para um índice numérico
   uint8_t bitIndex = saida[2] - '0';            // Converte o caractere do bit para um índice numérico
-  bitWrite(dados[byteIndex], bitIndex, valor);  // Atualiza o bit específico no array de dados
 
   setSaida(byteIndex, bitIndex, valor);  // Chama a função setSaida para atualizar o estado da saída
 }
@@ -67,7 +68,7 @@ void ShiftRegister::atualizarSaidas() {
 
 // Verifica se uma saída específica está atuada (ligada)
 bool ShiftRegister::isAtuado(uint8_t byteIndex, uint8_t bitIndex) {
-  return dados[byteIndex] >> bitIndex & 1;  // Retorna o estado do bit específico no array de dados
+  return (dados[byteIndex] >> bitIndex) & 1;  // Retorna o estado do bit específico no array de dados
 }
 
 // Verifica se uma saída específica está atuada (ligada) usando a notação "x.y" sendo x o byte e y o bit

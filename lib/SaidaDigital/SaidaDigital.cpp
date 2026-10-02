@@ -35,6 +35,17 @@ bool SaidaDigital::getStatus() {
   return ShiftRegister::Instance().isAtuado(this->byteSaida, this->bitSaida);
 }
 
+// Função responsável por verificar se a saída está atuada (ligada) levando em consideração o nível lógico de atuação definido.
+bool SaidaDigital::isAtuado() {
+  if(ShiftRegister::Instance().isAtuado(this->byteSaida, this->bitSaida) && nivelAtuacao == HIGH) {
+    return true;
+  } else if(!ShiftRegister::Instance().isAtuado(this->byteSaida, this->bitSaida) && nivelAtuacao == LOW) {
+    return true;
+  }
+
+  return false;
+}
+
 // Função responsável por ligar o SaidaDigital
 void SaidaDigital::liga() {
   if (nivelAtuacao == HIGH) {
@@ -62,3 +73,4 @@ void SaidaDigital::setNivelAtuacao(uint8_t nivelAtuacao) {
     ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, HIGH);
   }
 }
+

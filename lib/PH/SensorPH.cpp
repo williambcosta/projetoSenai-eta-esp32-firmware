@@ -14,8 +14,8 @@
  * esperada no pino do microcontrolador. Para isso é necessário um divisor de tensão, que pode ser feito com dois resistores.
  * A tensão máxima esperada é de 3,3V, que representa PH 0.
  *
- * Um valor de offset é calculado separadamente para os valores ácidos e alcalinos, pois o sensor E201-C possui uma curva de resposta não linear,
- * o que pode causar desvio significativo ao ler valores extremos de PH. O cálculo do offset é feito com base na diferença entre a leitura média
+ * Um valor de slope é calculado separadamente para os valores ácidos e alcalinos, pois o sensor E201-C possui uma curva de resposta não linear,
+ * o que pode causar desvio significativo ao ler valores extremos de PH. O cálculo do slope é feito com base na diferença entre a leitura média
  * do sensor e a leitura de referência para PH neutro (7), multiplicada pelo fator de conversão, que é determinado pela diferença entre os valores
  * de referência para soluções tampão ácida e alcalina.
  *
@@ -27,7 +27,8 @@ SensorPH::SensorPH(uint8_t pinoPH) {
   this->pinoPH = pinoPH;
 }
 
-SensorPH::SensorPH(uint8_t pinoPH, float valorPhAcido, float adcPhAcido, float adcPhNeutro, float valorPhAlcalino, float adcPhAlcalino) : SensorPH(pinoPH) {
+SensorPH::SensorPH(uint8_t pinoPH, uint16_t amostras, float valorPhAcido, float adcPhAcido, float adcPhNeutro, float valorPhAlcalino, float adcPhAlcalino) : SensorPH(pinoPH) {
+  this->amostras = amostras;
   this->valorPhAcido = valorPhAcido;
   this->adcPhAcido = adcPhAcido;
 
@@ -39,9 +40,9 @@ SensorPH::SensorPH(uint8_t pinoPH, float valorPhAcido, float adcPhAcido, float a
 
 // Calcula o valor de ph tendo como base o valor retornado pelo sensor
 void SensorPH::calculaPH() {
-  float adcRecebido = 0.0f;  // Varrável auxiliar que armazena o valor rebebido no pino do esp32
+  float adcRecebido = 0.0f;  // Varrável auxiliar que armazena o valor recebido no pino do esp32
   float somatoria = 0.0f;    // Variável auxiliar que armazena a somatória dos valores para posteriormente calcular a média
-  float offset = 0.0f;       // Variável auxiliar que é utilizado para calcular o valor de PH a partir do valor lido
+  float slope = 0.0f;       // Variável auxiliar que é utilizado para calcular o valor de PH a partir do valor lido
 
   // Realiza várias leituras do sensor, somando os resultados, para estimar a média.
   // Isso ajuda a reduzir o ruído e obter uma leitura mais precisa.
@@ -54,14 +55,14 @@ void SensorPH::calculaPH() {
 
   float leituraMedia = somatoria / amostras;  // Realiza a média entre os valores lidos
 
-  // Calcula o offset com base na leitura média e nos valores de referência para soluções tampão ácida e alcalina.
+  // Calcula o slope com base na leitura média e nos valores de referência para soluções tampão ácida e alcalina.
   if (leituraMedia < adcPhNeutro) {  // Caso a solução seja alcalina
-    offset = (valorPhAlcalino - 7.0f) / (adcPhAlcalino - adcPhNeutro);
+    slope = (valorPhAlcalino - 7.0f) / (adcPhAlcalino - adcPhNeutro);
   } else {  // Caso ácida
-    offset = (7.0f - valorPhAcido) / (adcPhNeutro - adcPhAcido);
+    slope = (7.0f - valorPhAcido) / (adcPhNeutro - adcPhAcido);
   }
 
-  ph = 7.0f + (offset * (leituraMedia - adcPhNeutro));  // Atualiza o valor de ph
+  ph = 7.0f + (slope * (leituraMedia - adcPhNeutro));  // Atualiza o valor de ph
 }
 
 // Retorna o valor de PH calculado

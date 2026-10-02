@@ -51,7 +51,7 @@ void SensorTurbidez::calculaNTU() {
     ntu = 0.0f;                            // fixa o valor de ntu em 0, indicando que a água esta limpa
 
   } else {  // Senão, calcula o valor de ntu através da fórmula
-    ntu = 1000 - (leituraMedia * fatorConversao);
+    ntu = (maxTensao - leituraMedia) * fatorConversao;
   }
 }
 

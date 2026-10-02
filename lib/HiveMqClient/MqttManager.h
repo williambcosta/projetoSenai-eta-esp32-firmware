@@ -12,9 +12,9 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 
-#define TOPICO_DADOS 1     // Definição do tópico de dados
-#define TOPICO_COMANDOS 2  // Definição do tópico de comandos
-#define TOPICO_ALERTAS 3   // Definição do tópico de alertas
+#define TOPICO_TELEMETRIA 1  // Definição do tópico de dados
+#define TOPICO_COMANDOS 2    // Definição do tópico de comandos
+#define TOPICO_ALERTAS 3     // Definição do tópico de alertas
 
 class MqttManager {
  private:
@@ -24,11 +24,11 @@ class MqttManager {
 
   int mqtt_porta;  // Porta do servidor MQTT
 
-  const char* mqtt_usuario;          // Nome de usuário para autenticação MQTT
-  const char* mqtt_senha;            // Senha para autenticação MQTT
-  const char* mqtt_topico_dados;     // Tópico para publicar dados.
-  const char* mqtt_topico_comandos;  // Tópico para receber comandos.
-  const char* mqtt_topico_alertas;   // Tópico para enviar alertas.
+  const char* mqtt_usuario;                      // Nome de usuário para autenticação MQTT
+  const char* mqtt_senha;                        // Senha para autenticação MQTT
+  const char* mqtt_topico_telemetria = nullptr;  // Tópico para publicar dados.
+  const char* mqtt_topico_comandos = nullptr;    // Tópico para receber comandos.
+  const char* mqtt_topico_alertas = nullptr;     // Tópico para enviar alertas.
 
   WiFiClientSecure espClient;  // Cliente seguro para comunicação MQTT
   PubSubClient client;         // Cliente MQTT
@@ -37,8 +37,11 @@ class MqttManager {
 
   static MqttManager* _instance;  // Ponteiro estático para armazenar a instância atual da classe
 
+  // Controle de reconexão não-bloqueante
+  unsigned long ultimoIntervaloReconexao = 0;
+  const unsigned long intervaloReconexao = 5000; // Tenta reconectar a cada 5 segundos
+
   void setupWifi();  // Função para configurar a conexão Wi-Fi
-  void reconnect();  // Função para reconectar ao servidor MQTT caso a conexão seja perdida
 
   // Função que processa a mensagem recebida
   void handleMsg(char* topico, byte* mensagem, unsigned int tamanho);
@@ -49,15 +52,17 @@ class MqttManager {
  public:
   MqttManager(const char* ssid, const char* wifiSenha, const char* servidor, int porta, const char* usuario, const char* usuarioSenha);
 
-  void begin(const char* topicoComandos = nullptr, const char* topicoDados = nullptr, const char* topicoAlertas = nullptr);  // Inicializa a conexão Wi-Fi e configura o cliente MQTT, opcionalmente assinando um tópico de comandos
-  void handle();                                                                                                             // Função responsável por chamar o loop do cliente MQTT e manter a conexão ativa
-  bool publish(uint8_t topico, const char* mensagem);                                                                        // Função para publicar mensagens em um tópico específico
+  void begin(const char* topicoComandos = nullptr, const char* topicoTelemetria = nullptr, const char* topicoAlertas = nullptr);  // Inicializa a conexão Wi-Fi e configura o cliente MQTT, opcionalmente assinando um tópico de comandos
+  void reconnect();                                                                                                               // Função para reconectar ao servidor MQTT caso a conexão seja perdida
+  void handle();                                                                                                                  // Função responsável por chamar o loop do cliente MQTT e manter a conexão ativa
+  bool publish(uint8_t topico, const char* mensagem);                                                                             // Função para publicar mensagens em um tópico específico
+  bool isConnected();                                                                                                             // Função para verificar se o cliente MQTT está conectado ao servidor
 
   String getUltimaMsg() const { return ultimaMsg; }  // Retorna a última mensagem recebida
 
-  void setTopicoDados(const char* topico) { mqtt_topico_dados = topico; }        // Define o tópico para publicar os dados
-  void setTopicoComandos(const char* topico) { mqtt_topico_comandos = topico; }  // Define o tópico para receber dados
-  void setTopicoAlertas(const char* topico) { mqtt_topico_alertas = topico; }    // Define o tópico para receber alertas
+  void setTopicoTelemetria(const char* topico) { mqtt_topico_telemetria = topico; }  // Define o tópico para publicar os dados
+  void setTopicoComandos(const char* topico) { mqtt_topico_comandos = topico; }      // Define o tópico para receber dados
+  void setTopicoAlertas(const char* topico) { mqtt_topico_alertas = topico; }        // Define o tópico para receber alertas
 };
 
 #endif

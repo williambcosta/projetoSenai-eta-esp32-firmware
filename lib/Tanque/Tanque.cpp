@@ -54,16 +54,16 @@ bool Tanque::isFalhaSensores() {
  * Retorna FALSE mesmo quando não existir o indice solicitado.
  */
 bool Tanque::isAtuadorLigado(uint8_t indiceAtuador) {
-  if (hasAtuador(indiceAtuador)) {  // Verifica se o indice é maior ou igual ao tamanho do vetor
+  if (!hasAtuador(indiceAtuador)) {  // Verifica se o indice é maior ou igual ao tamanho do vetor
     return false;                   // caso seja retorna null pointer
   }
 
-  return atuadores[indiceAtuador].getStatus();  // Caso contrário retorna a referencia do atuador indicado
+  return atuadores[indiceAtuador].isAtuado();  // Caso contrário retorna a referencia do atuador indicado
 }
 
 // Verifica se existe um atuador no indice indicado. Retorna True caso exista
 bool Tanque::hasAtuador(uint8_t indiceAtuador) {
-  return (indiceAtuador >= 0) && (indiceAtuador < atuadores.size());
+  return indiceAtuador < atuadores.size();
 }
 
 // Liga o atuador indicado. Caso o mesmo já esteja ligado, não faz nada.

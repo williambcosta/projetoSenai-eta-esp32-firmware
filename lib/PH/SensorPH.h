@@ -21,7 +21,7 @@ class SensorPH {
 
  public:
   SensorPH(uint8_t pinoPh);
-  SensorPH(uint8_t pinoPH, float valorPhAcido, float adcPhAcido, float adcPhNeutro, float valorPhAlcalino, float adcPhAlcalino);
+  SensorPH(uint8_t pinoPH, uint16_t amostras, float valorPhAcido, float adcPhAcido, float adcPhNeutro, float valorPhAlcalino, float adcPhAlcalino);
 
   float getPH();  // Retorna o valor de PH calculado
 };

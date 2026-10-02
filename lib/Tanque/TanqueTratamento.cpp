@@ -13,7 +13,7 @@ TanqueTratamento::TanqueTratamento(SensorTemperatura& sensorTemp, SensorPH& sens
       temperatura(sensorTemp), turbidez(sensorTurbidez), ph(sensorPH) {
 }
 
-// Função que retornan a temperatura da água do tanque em C°
+// Função que retorna a temperatura da água do tanque em C°
 float TanqueTratamento::getTemperatura() {
   return temperatura.getTemperatura();
 }
