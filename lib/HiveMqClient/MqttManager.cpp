@@ -70,6 +70,8 @@ void MqttManager::begin(const char* topicoComandos, const char* topicoDados, con
   espClient.setInsecure();                        // Não valida a conexão, apenas aceita o que recebe. Para o nosso fim é o suficiente
   client.setServer(mqtt_servidor, mqtt_porta);    // Configura o servidor
   client.setCallback(MqttManager::mqttCallback);  // Configura o callback responsável pelo recebimento das mensagens
+
+  ultimaMsg.reserve(51);
 }
 
 // Callback estático que será chamado pelo PubSubClient quando uma mensagem for recebida
