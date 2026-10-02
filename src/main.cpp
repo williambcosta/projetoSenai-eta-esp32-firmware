@@ -73,6 +73,15 @@
 // Lâmpadas
 #define PIN_LAMPADA_UV "1.2"  // Pino da lâmpada UV
 
+enum class ModoOperacao {
+  Automatico,  // Modo automático
+  Manual,      // Modo manual de operação, Bombas continuam a ser desacionadas dependendo do nível dos tanques para evitar transbordo
+  Parada,      // Finaliza a etapa atual e para o processo
+  Emergencia   // Para todos os atuadores e reínicia todos os parâmetros
+};
+
+ModoOperacao modoOperacao = ModoOperacao::Automatico;  // Armazena o modo de operação atual do processo
+
 // Enumeração para representar as etapas do processo de tratamento de água
 enum class EtapaProcesso {
   Inicial,                       // Etapa inicial do processo, indica que o tanque de armazenamento esta enchendo
@@ -80,31 +89,45 @@ enum class EtapaProcesso {
   EsvaziandoTqArmaz,             // Esvaziamento do tanque de armazenamento
   VerificTransferenciaAtivos,    // Verificação do nível do tanque de ativos
   DosandoCoagulante,             // Dosagem do coagulante
-  VerificandoPh,                 // Verificação de pH após dosagem de coagulante
+  VerificandoPh,                 // Verificação de pH após dosagem de químicos
   DosandoAlcalinizante,          // Dosagem de alcalinizante
   DosandoSanitizante,            // Dosagem de sanitizante
-  PreparaCoagulacao,             // Continua a homogeinização antes da coagulação e decantação dos flocos
-  Coagulacao,                    // Aguardando a coagulação e decantação dos flocos
-  Homogeneizando,                // Homogeneizando mistura de químicos
-  PreparandoLibercaoSedimentos,  // Preparando para liberar o decantado para o tanque de efluentes
+  PreparaCoagulacao,             // Homogeinização antes da coagulação e decantação dos flocos
+  Decantacao,                    // Aguardando a decantação dos flocos
+  PreparandoLibercaoSedimentos,  // Preparando para liberar os sedimentos para o tanque de efluentes
   RemovendoSedimentos,           // Removendo sedimentos do tanque de ativos
   PreparandoEsvaziamentoAtivos,  // Preparando para liberar a agua tratada para o tanque final
   EsvaziandoTanqueAtivos,        // Esvaziamento do tanque de ativos
+  VerificTransferenciaFinal,     // Verificação do nível do tanque final
   TratamentoUv,                  // Tratamento com luz UV
   Finalizado                     // Processo finalizado
 };
 
-EtapaProcesso etapaAtual = EtapaProcesso::Inicial;     // Variável para armazenar a etapa atual do processo
-EtapaProcesso controleEtapa = EtapaProcesso::Inicial;  // Variável para armazenar a etapa anterior do processo
+EtapaProcesso etapaAtual = EtapaProcesso::Inicial;  // Variável para armazenar a etapa atual do processo
+EtapaProcesso controleEtapa = etapaAtual;           // Variável para armazenar a etapa anterior do processo
+EtapaProcesso controleParada = controleEtapa;       // Variável utilizada para garantir que a etapa atual do processo finalize caso uma parada seja acionada
 
+/************************************/
 /*****  TANQUE DE ARMAZENAMENTO *****/
+/************************************/
 // Atuadores
 std::vector<SaidaDigital> saidasArmazenamento = {SaidaDigital(PIN_BOMBA_PM1)};
 
 // Instancia
 Tanque tanqueArmazenamento = Tanque(saidasArmazenamento, PIN_SNA_ARMAZENAMENTO, PIN_SNB_ARMAZENAMENTO);
 
-/***** TANQUE DE ATIVOS *****/
+/************************************/
+/******* TANQUE DE EFLUENTES ********/
+/************************************/
+// Atuadores
+std::vector<SaidaDigital> saidasEfluentes = {SaidaDigital(PIN_BOMBA_PM3)};
+
+// Instancia
+Tanque tanqueEfluentes = Tanque(saidasEfluentes, PIN_SNA_EFLU, PIN_SNB_EFLU);
+
+/************************************/
+/********* TANQUE DE ATIVOS *********/
+/************************************/
 // Sensores
 SensorTemperatura tempAtiv = SensorTemperatura(PIN_TEMP_ATIVOS);                     // Temperatura
 SensorTurbidez ntuAtiv = SensorTurbidez(PIN_TBDZ_ATIVOS, 250, 2.0f, 0.0f);           // Turbidez
@@ -125,7 +148,9 @@ std::vector<SaidaDigital> saidasAtivos = {
 // Instancia
 TanqueTratamento tanqueAtivos = TanqueTratamento(tempAtiv, phAtivos, ntuAtiv, saidasAtivos, PIN_SNA_ATIVOS, PIN_SNB_ATIVOS);
 
-/***** TANQUE FINAL *****/
+/************************************/
+/*********** TANQUE FINAL ***********/
+/************************************/
 // Sensores
 SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);                   // Temperatura
 SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 250, 2.0f, 0.0f);         // Turbidez
@@ -137,13 +162,6 @@ std::vector<SaidaDigital> saidasFinal = {SaidaDigital(PIN_RM2_FINAL), SaidaDigit
 // Instancia
 Tanque tanqueFinal = Tanque(saidasFinal, PIN_SNA_FINAL, PIN_SNB_FINAL);
 
-/***** TANQUE DE EFLUENTES *****/
-// Atuadores
-std::vector<SaidaDigital> saidasEfluentes = {SaidaDigital(PIN_BOMBA_PM3)};
-
-// Instancia
-Tanque tanqueEfluentes = Tanque(saidasEfluentes, PIN_SNA_EFLU, PIN_SNB_EFLU);
-
 /* ----- Variáveis utilitárias e de controle do processo ----- */
 // Parâmetros de tempo (em milisegundos)
 int tempoDeVerificacao = 1000;         // Tempo para verificar o nível dos tanques
@@ -153,7 +171,8 @@ int tempoDosagemSanitizante = 5000;    // Tempo de dosagem do sanitizante
 int tempoPausaDosagem = 5000;          // Tempo que determina quando a dosagem será pausada para homogeneizar os quimicos com a agua
 int tempoHomogeneizacao = 5000;        // Tempo após dosagem de quimica para homogeinização da agua antes de nova medição de parâmetros
 int tempoDescargaEfluentes = 30000;    // Tempo que a bomba de transferencia do tanque de ativos fica ligada ao esvaziar o decantado para o tanque de efluentes
-int tempoCoagulacao = 3000000;         // Tempo de espera para que a coagulação aconteça
+int tempoCoagulacao = 300000;          // Tempo de espera para que a coagulação aconteça
+int tempoTratamentoUv = 300000;        // Tempo mínimo de espera para que o tratamento UV seja efetivo
 
 // Temporizadores
 unsigned long dtDosagemCoagulante = 0;     // Tempo percorrido de dosagem de coagulante
@@ -162,6 +181,7 @@ unsigned long dtDosagemSanitizante = 0;    // Tempo percorrido de dosagem de san
 unsigned long dtDescargaEfluentes = 0;     // Tempo percorrido de descarga dos efluentes
 unsigned long dtArmazenamento = 0;         // Tempo percorrido de verificação do tanque de armazenamento
 unsigned long dtAtivos = 0;                // Tempo percorrido de verificação do tanque de ativos
+unsigned long dtFinal = 0;                 // Tempo percorrido de verificação do tanque de final
 unsigned long dtHomogeneizacao = 0;        // Tempo percorrido de homogeneização de quimicos
 unsigned long dtCoagulacao = 0;            // Tempo percorrido de coagulação dos residuos do tanque de ativos
 
@@ -197,9 +217,85 @@ void setup() {
 /* ----- Loop principal ----- */
 void loop() {
   // TODO: Implementar alertas
-  // mqtt.handle();
+  // TODO: Implementar envio dos parâmetros por MQTT
+  // TODO: Implementar Comandos recebidos
 
+  // mqtt.handle();
   // mqtt.publish(String(random(20, 35)).c_str());
+
+  // TODO: Essas condições vão desligar as bombas imediatamente quando dependendo do nível dos tanques
+  // a etapa de verificação de nível fica obsoleta nesse caso
+
+  /* Condições sem etapa específica */
+  // Tanque armazenamento
+  if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (TAR.1) Se armazenamento nível baixo ou ativos nível alto
+    tanqueArmazenamento.desligaAtuador(0);                                 // Desliga bomba PM1
+  }
+
+  // Tanque ativos
+  if (tanqueAtivos.isNivelBaixo()) {
+    tanqueAtivos.desligaAtuador(1);
+    if (tanqueAtivos.isAtuadorLigado(5) && !tanqueEfluentes.isNivelAlto() ||
+        tanqueAtivos.isAtuadorLigado(6) && !tanqueFinal.isNivelAlto()) {
+      tanqueAtivos.desligaAtuador(0);
+    }
+  }
+
+  // Tanque Final
+  if (tanqueFinal.isNivelBaixo()) {  // (TF.1) Se tanque final nível baixo
+    tanqueFinal.desligaAtuador(0);   // Desliga mexedor
+    tanqueFinal.desligaAtuador(1);   // Desliga lampada UV
+  }
+
+  // Tanque Efluentes
+  if (tanqueEfluentes.isNivelAlto() && !tanqueArmazenamento.isNivelAlto()) {         // (TE.1) Se tanque de efluentes nível alto e tanque de armazenamento não nível alto
+    tanqueEfluentes.ligaAtuador(0);                                                  // Aciona PM3
+  } else if (tanqueEfluentes.isNivelBaixo() || tanqueArmazenamento.isNivelAlto()) {  // (TE.2) Se tanque de armazenamento nível alto || efluentes baixo
+    tanqueEfluentes.desligaAtuador(0);                                               // Desaciona PM3
+  }
+
+  /** Modos de Operação **/
+  /* Emergencia
+   * O modo de Emergencia interrompe todo o processo.
+   * Desligando todos os atuadores e garante que o processo reiniciará caso velte ao normal
+   */
+  if (modoOperacao == ModoOperacao::Emergencia) {
+    tanqueArmazenamento.desligaAtuador(0);
+
+    tanqueAtivos.desligaAtuador(0);
+    tanqueAtivos.desligaAtuador(1);
+    tanqueAtivos.desligaAtuador(2);
+    tanqueAtivos.desligaAtuador(3);
+    tanqueAtivos.desligaAtuador(4);
+    tanqueAtivos.desligaAtuador(5);
+    tanqueAtivos.desligaAtuador(6);
+
+    tanqueEfluentes.desligaAtuador(0);
+
+    tanqueFinal.desligaAtuador(0);
+    tanqueFinal.desligaAtuador(1);
+
+    etapaAtual = controleEtapa = controleParada = EtapaProcesso::Inicial;
+    return;
+  }
+
+  /* Manual
+   * O modo de Manual vai apenas interpretar os comandos enviádos pelo supervisório
+   */
+  if (modoOperacao == ModoOperacao::Manual) {
+    // TODO: Interpretar os comandos enviados por MQTT aqui
+    // TODO: Garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com HVK2 ligado etapa vai ser esvaziando tanque Ativos
+    return;
+  }
+
+  /* Parada
+   * O modo de Parada vai esperar a etapa atual finalizar e interromper o processo. Quando voltar para o modo auto continua de onde parou
+   */
+  if (modoOperacao == ModoOperacao::Parada) {
+    if (controleParada != etapaAtual) {
+      return;
+    }
+  }
 
   /** Processo de tratamento **/
   /* Tanque de Armazenamento */
@@ -244,7 +340,7 @@ void loop() {
   // 6.1 - Se tempo de coagulação >= tempo de homogeneização
   // 6.2 - Atualiza tempo de coagulação
   // 6.3 - Desliga RM1
-  // 6.4 - Inicia a coagulação -------------------------------------------------------------------> Coagulacao
+  // 6.4 - Inicia a coagulação -------------------------------------------------------------------> Decantacao
 
   // Coagulação //
   // 7.1 - Se tempo de coagulação for atingido
@@ -268,22 +364,29 @@ void loop() {
 
   // Preparando Transferencia para Tanque Final //
   // 8.5 - Se tempo de verificação alcancado
-  // 8.6 - Se tanque final nivel baixo, Aciona PM2 ------------------------------------------------> EsvaziandoTanqueAtivos
+  // 8.6 - Se tanque final nivel baixo, Aciona PM2 -----------------------------------------------> EsvaziandoTanqueAtivos
+
+  // Transferindo para tanque final //
+  // 9.1 - Se tanque final nível alto || tanque ativos nível baixo
+  // 9.2 - Atualiza temporizador tanque final ----------------------------------------------------> VerificTransferenciaFinal
+  // 9.3 - Se tanque final nível alto || tanque ativos nível baixo
+  // 9.4 - Se o tempo de verificação alcançado, deliga PM2, deliga HVK2
+  // 9.5 - Liga RM2, liga H1 UV e atualiza temporizador de tratamento UV -------------------------> TratamentoUv
 
   /* Tanque Final */
-  //  - Se Tanque ativos nivel baixo || Tanque final nivel alto
-  //  - Desaciona RM1, Desaciona PM2 e Desaciona HVK2
-  
-  /* Condições sem etapa */
-  // Tanque final //
-  //  - Se Tanque final nivel alto, Aciona H1 e RM2
-  //  - Caso contrario desliga H1 e RM2
+  // 9.6 - Se o tempo mínimo de tratamento for alcançado
+  // 9.7 - Finaliza o processo -------------------------------------------------------------------> TratamentoUv
 
-  // Efluentes // 
-  //  - Quando nível alto && (!Nível alto armazenamento)
-  //  - Aciona PM3
-  //  - Se Armazenamento Nível alto || Efluentes Nível baixo
-  //  - Para PM3
+  /* Condições sem etapa */
+  // Tanque de Armazenamento
+  // TAR.1 - Se armazenamento nível baixo || ativos nível alto, desliga PM1
+
+  // Tanque final //
+  // TF.1 - Se tanque final nível baixo desliga H1 e RM2
+
+  // Efluentes //
+  // TE.1 - Se tanque efluentes nível alto && armazenamento não nível alto, Aciona PM3
+  // TE.2 - Se Armazenamento Nível alto || Efluentes Nível baixo, Desaciona PM3
 
   /* ----- Processo Tanque Armazenamento ----- */
   if (etapaAtual == EtapaProcesso::Inicial) {             // Tanque de armazenamento Enchendo
@@ -378,14 +481,14 @@ void loop() {
     if (millis() - dtCoagulacao >= tempoHomogeneizacao) {  // (6.1) Mantém o agitador ligado pelo tempo definido para homogeneização
       dtCoagulacao = millis();                             // (6.2) Atualiza o tempo atual em milissegundos
       tanqueAtivos.desligaAtuador(1);                      // (6.3) Desliga o mexedor RM1 para aguardar a coagulação dos sólidos
-      etapaAtual = EtapaProcesso::Coagulacao;              // (-> 6.4) Muda a etapa do processo para "Coagulação"
+      etapaAtual = EtapaProcesso::Decantacao;              // (-> 6.4) Muda a etapa do processo para "Coagulação"
     }
   }
 
   /* Coagulação */
-  if (etapaAtual == EtapaProcesso::Coagulacao) {                   // Aguardando coagulação dos sólidos
+  if (etapaAtual == EtapaProcesso::Decantacao) {                   // Aguardando coagulação dos sólidos
     if (millis() - dtCoagulacao >= tempoCoagulacao) {              // (7.1) Aguarda o tempo determinado de coagulação antes de seguir com o processo
-      if (tanqueAtivos.getTurbidez() <= alvoNtu) {                 // (7.2) Alvo de ntu atingido
+      if (tanqueAtivos.getTurbidez() <= alvoNtu) {                 // (7.2) Alvo de ntu atingido // TODO: Talvez saia
         tanqueAtivos.ligaAtuador(5);                               // (7.2) Aciona HVK1
         dtDescargaEfluentes = millis();                            // (7.3) Atualiza o temporizador de descarga de efluentes
         etapaAtual = EtapaProcesso::PreparandoLibercaoSedimentos;  // (-> 7.3) Muda a etapa do processo para "PreparandoLibercaoSedimentos
@@ -425,7 +528,7 @@ void loop() {
   }
 
   /* Transferencia para tanque final */
-  if (etapaAtual == EtapaProcesso::PreparandoEsvaziamentoAtivos) {  // Preparando para transferir
+  if (etapaAtual == EtapaProcesso::PreparandoEsvaziamentoAtivos) {  // Preparando para transferir água tratada para o tanque final
     if (millis() - dtAtivos >= tempoDeVerificacao) {                // (8.5) Se tempo de verificação atingido
       if (tanqueFinal.isNivelBaixo()) {                             // (8.6) Se tanque final em nível baixo
         tanqueAtivos.ligaAtuador(0);                                // (8.6) Liga bomba de transferencia
@@ -434,16 +537,31 @@ void loop() {
     }
   }
 
-
-  /* Condições sem etapa específica */
-  if (etapaAtual == EtapaProcesso::EsvaziandoTanqueAtivos) {
-    if (tanqueAtivos.isNivelBaixo() || tanqueFinal.isNivelAlto()) {
-
+  if (etapaAtual == EtapaProcesso::EsvaziandoTanqueAtivos) {         // Transferindo água tratada
+    if (tanqueFinal.isNivelAlto() || tanqueAtivos.isNivelBaixo()) {  // (9.1) Se tanque final em nível baixo
+      dtFinal = millis();                                            // (9.2) Atualiza o temporizador
+      etapaAtual = EtapaProcesso::VerificTransferenciaFinal;         // (-> 9.2) Muda etapa do processo para VerificTransferenciaFinal
     }
   }
 
-  // TODO: Implementar Descarga para o tanque final
-  // TODO: Implementar Tanque de efluentes
-  // TODO: Ação de interromper as bombas deve acontecer fora de uma etapa específica. Verificar encessidade de usar controle de 
-  // TODO: processo ou somente seguir para a próxima etapa resolve
+  /* ----- Processo Tanque Final ----- */
+  if (etapaAtual == EtapaProcesso::VerificTransferenciaFinal) {      // Preparando para transferir água tratada para o tanque final
+    if (tanqueFinal.isNivelAlto() || tanqueAtivos.isNivelBaixo()) {  // (9.3) Se nível do tanque de ativos baixo ou final alto
+      if (millis() - dtFinal >= tempoDeVerificacao) {                // (9.4) Se tempo de verificação atingido
+        tanqueAtivos.desligaAtuador(0);                              // (9.4) Desliga bomba de transferencia PM2
+        tanqueFinal.ligaAtuador(0);                                  // (9.5) Liga mexedor RM2
+        tanqueFinal.ligaAtuador(1);                                  // (9.5) Liga lampada UV
+        dtFinal = millis();                                          // (9.5) Atualiza o temporizador do tanque final
+        etapaAtual = EtapaProcesso::TratamentoUv;                    // (-> 9.5) Muda etapa do processo para TratamentoUv
+      }
+    }
+  }
+
+  if (etapaAtual == EtapaProcesso::TratamentoUv) {  // Tratamento UV
+    if (millis() - dtFinal >= tempoTratamentoUv) {  // (9.6) Se tempo de tratamento mínimo atingido
+      etapaAtual = EtapaProcesso::Finalizado;       // (-> 9.7) Muda etapa do processo para Finalizado
+    }
+  }
+
+  controleParada = etapaAtual;  // Atualiza o controle de parada para garantir que a etapa atual finalize antes de pausar o processo
 }
