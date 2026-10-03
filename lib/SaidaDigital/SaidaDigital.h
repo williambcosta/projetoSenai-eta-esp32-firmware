@@ -9,8 +9,6 @@
 
 class SaidaDigital {
  private:
-  // long tempo = 0;  // Armazena o tempo em que a saida foi ligada
-
   /*
    * Representação do registrador de deslocamento que controla a saida. O byte irá representar o registrador, caso mais de
    * um registrador seja utilizado e o bit irá representar a posição dentro do registrador.
@@ -28,13 +26,12 @@ class SaidaDigital {
   SaidaDigital(uint8_t byteSaida, uint8_t bitSaida);
   SaidaDigital(uint8_t byteSaida, uint8_t bitSaida, uint8_t nivelAtuacao);
 
-  bool getStatus();  // Retorna o estado atual do SaidaDigital. TRUE = ligado, FALSE = desligado
+  bool getStatus();  // Retorna o estado atual do SaidaDigital. TRUE = ligado, FALSE = desligado. Não representanecessáriamente se o atuador esta funcionando, para isso use a função isAtuado() 
+  bool isAtuado();   // Função responsável por verificar se a saída está atuada (ligada) levando em consideração o nível lógico de atuação definido. 
 
   void liga();                                 // Função responsável por ligar o SaidaDigital
   void desliga();                              // Função responsável por desligar o SaidaDigital
   void setNivelAtuacao(uint8_t nivelAtuacao);  // Função responsável por definir o nível lógico usado para ativar a saída. Se deve atuar em HIGH ou LOW
-  // void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minutos);    // Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
-  // void desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos);  // Função responsável por desligar a saída após o tempo determinado em segundos. O valor será limitado a 15300 segundos
 };
 
 #endif

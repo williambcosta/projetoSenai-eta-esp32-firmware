@@ -6,12 +6,13 @@
  *
  * O fator de conversão é o valor usado para converter a tensão obtida em um valor de NTU e segue a formula
  * fatorConversão = 1000  / (tensão máxima - tensão minima), onde 1000 é o NTU máximo nominal do sensor KIE-TS300B
- * tensão máxima é o valor de tensão enviado pelo sensor quando em água limpa e
- * tensão mínima é o valor de tensão enviado pelo sensor quando o mesmo estiver totalmente bloqueado
+ * tensão mínima é o valor de tensão enviado pelo sensor quando em água limpa e
+ * tensão máxima é o valor de tensão enviado pelo sensor quando o mesmo estiver totalmente bloqueado (em água muito turva)
  *
  * É necessário medir os valores máximo e minimo que o sensor envia, pois o sensor pode enviar várias faixas de tensão.
  * Para isso basta medir o valor enviado com o sensor sem obstrução nenhuma (o que indica água limpa), esse valor será
  * armazenado na variável maxTensao.
+ * Para a minTensao basta bloquear totalmente o sensor.
  *
  */
 
@@ -20,10 +21,10 @@
 SensorTurbidez::SensorTurbidez(uint8_t pinoTurbidez, uint16_t amostras, float maxTensao, float minTensao) {
   this->pinoTurbidez = pinoTurbidez;
   this->amostras = amostras;
-  this->maxtensao = maxTensao;
+  this->maxTensao = maxTensao;
   this->minTensao = minTensao;
 
-  fatorConversao = 1000.0f / (maxtensao - minTensao);
+  fatorConversao = 1000.0f / (maxTensao - minTensao);
 }
 
 // Função que calcula a turbidez em NTU a partir da leitura do sensor.
@@ -43,14 +44,14 @@ void SensorTurbidez::calculaNTU() {
   // Realiza a média entre os valores lidos
   float leituraMedia = somatoria / amostras;
 
-  if (leituraMedia < minTensao) {  // Se a leitura for menor que 2.5
-    ntu = 2000.0f;                 // fixa o valor de ntu em 3000, indicando que a água esta turva
+  if (leituraMedia < minTensao) {  // Se a leitura for menor que a tansão minima enviada pelo sensor
+    ntu = 1000.0f;                 // fixa o valor de ntu em 1000, indicando que a água esta turva
 
-  } else if (leituraMedia >= maxtensao) {  // Caso contrário, se a leitura for maior que 4.2
+  } else if (leituraMedia >= maxTensao) {  // Caso contrário, se a leitura for maior a tensão máxima enviada pelo sensor
     ntu = 0.0f;                            // fixa o valor de ntu em 0, indicando que a água esta limpa
 
   } else {  // Senão, calcula o valor de ntu através da fórmula
-    ntu = 1000 - (leituraMedia * fatorConversao);
+    ntu = (maxTensao - leituraMedia) * fatorConversao;
   }
 }
 

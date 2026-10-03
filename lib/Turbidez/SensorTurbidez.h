@@ -10,7 +10,7 @@ class SensorTurbidez {
   uint16_t amostras = 100;  // Variável auxiliar para leitura do sensor. Indica quantas vezes ele será lido
 
   float ntu = 0.0f;        // Variável que armazena o valor de turbidez em NTU.
-  float maxtensao = 1.9f;  // Valor máximo medido que o sensor KIE-TS300B envia. Indica água cristalina.
+  float maxTensao = 1.9f;  // Valor máximo medido que o sensor KIE-TS300B envia. Indica água cristalina.
   float minTensao = 0.2f;  // Valor mínimo medido que o sensor KIE-TS300B envia. Indica água muito turva.
 
   /*

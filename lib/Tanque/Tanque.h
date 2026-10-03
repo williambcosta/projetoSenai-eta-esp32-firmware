@@ -17,10 +17,6 @@ class Tanque {
  public:
   Tanque(const std::vector<SaidaDigital>& atuadores, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo);
 
-  float getTemperatura();  // Função que retornan a temperatura da água do tanque em C°
-  float getTurbidez();     // Função que retorna a turbidez da água do tanque em NTU (Nephelometric Turbidity Units)
-  float getPH();           // Função que retorna o ph da água do tanque
-
   bool isNivelAlto();      // Função que indica se o nível da água do tanque está alto
   bool isNivelBaixo();     // Função que indica se o tanque está vazio
   bool isFalhaSensores();  // Função que indica se exite falha nos sensores.
