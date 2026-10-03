@@ -64,6 +64,7 @@ void MqttManager::begin(const char* topicoComandos, const char* topicoTelemetria
   client.setCallback(MqttManager::mqttCallback);  // Configura o callback responsável pelo recebimento das mensagens
   client.setBufferSize(1024);                     // Configura o tamanho do buffer para receber mensagens maiores
 
+  msgAtual.reserve(51);
   ultimaMsg.reserve(51);
 }
 
@@ -79,16 +80,18 @@ void MqttManager::handleMsg(char* topico, byte* mensagem, unsigned int tamanho) 
   static String msg = "";
   msg.reserve(1024);  // Reserva espaço para a mensagem recebida
   msg = "";           // Limpa a mensagem para receber a nova
+
+  // Transforma o array de bytes recebido em uma string para facilitar o processamento
   for (int i = 0; i < tamanho; i++) {
     msg += (char)mensagem[i];
   }
 
-  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, msg.c_str());
-  ultimaMsg = msg;
+  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, msg.c_str());  // Loga a mensagem recebida no console
+  msgAtual = msg;                                                                              // Salva a última mensagem recebida para que possa ser acessada posteriormente
 }
 
 // Função que deve ser chamada no loop principal para manter a conexão
-void MqttManager::handle() {
+bool MqttManager::handle() {
   if (client.connected()) {
     client.loop();
   } else {
@@ -98,6 +101,13 @@ void MqttManager::handle() {
       ultimoIntervaloReconexao = agora;
       reconnect();
     }
+  }
+  
+  if(msgAtual != ultimaMsg) {
+    ultimaMsg = msgAtual;
+    return true;
+  } else {
+    return false;
   }
 }
 

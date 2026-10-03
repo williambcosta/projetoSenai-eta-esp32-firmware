@@ -1,4 +1,6 @@
-/* ----- BIBLIOTECAS ----- */
+/*******************************************************************************************************************************/
+/***** BIBLIOTECAS *************************************************************************************************************/
+/*******************************************************************************************************************************/
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -16,28 +18,31 @@
 #include "TanqueTratamento.h"
 #include "processo.h"
 
-/* ----- DEFINICÕES ----- */
-/* ----- Configurações de Comunicação ----- */
+/*******************************************************************************************************************************/
+/***** DEFINICÕES **************************************************************************************************************/
+/*******************************************************************************************************************************/
+/***** Configurações de Comunicação *****/
 #define MQTT_BROKER "90d42cec75d14181b23673d72f964713.s1.eu.hivemq.cloud"
-#define MQTT_PORTA 8883           // Porta padrão para conexões MQTT seguras (TLS/SSL)
-#define MQTT_SENHA "esp12345"     // Senha do usuário MQTT
-#define MQTT_USUARIO "espclient"  // Usuário MQTT
-#define WIFI_SENHA "#Ws120912"    // Senha da rede Wi-Fi
-#define WIFI_SSID "Willian"       // SSID da rede Wi-Fi
+#define MQTT_PORTA 8883              // Porta padrão para conexões MQTT seguras (TLS/SSL)
+#define MQTT_SENHA "espclient12345"  // Senha do usuário MQTT
+#define MQTT_USUARIO "espclient"     // Usuário MQTT
+#define WIFI_SENHA "#Ws120912"       // Senha da rede Wi-Fi
+#define WIFI_SSID "Willian"          // SSID da rede Wi-Fi
 
-/* ----- Entradas Analógicas ----- */
+/***** Entradas Analógicas *****/
 // Sensores de turbidez
-#define PIN_TBDZ_ATIVOS 34  // Pino do sensor de turbidez da água tratada
-#define PIN_TBDZ_FINAL 35   // Pino do sensor de turbidez da água final
+#define PIN_TBDZ_INICIAL 34  // Pino do sensor de turbidez da água inicial
+#define PIN_TBDZ_FINAL 35    // Pino do sensor de turbidez da água final
 
 // Sensores de pH
 #define PIN_PH_ATIVOS 36  // Pino do sensor de pH da água tratada
 #define PIN_PH_FINAL 39   // Pino do sensor de pH da água final
 
-/* ----- Entradas Digitais ----- */
+/***** Entradas Digitais *****/
 // Sensores de temperatura
-#define PIN_TEMP_ATIVOS 4  // Pino do sensor de temperatura da água tratada
-#define PIN_TEMP_FINAL 13  // Pino do sensor de temperatura da água final
+#define PIN_TEMP_INICIAL 4  // Pino do sensor de temperatura da água inicial
+#define PIN_TEMP_ATIVOS 13  // Pino do sensor de temperatura da água tratada
+#define PIN_TEMP_FINAL 32   // Pino do sensor de temperatura da água final
 
 // Sensores de nível
 #define PIN_SNA_ARMAZENAMENTO 14  // Pino do sensor de nível alto tanque água bruta
@@ -49,10 +54,10 @@
 #define PIN_SNA_EFLU 22           // Pino do sensor de nível alto tanque efluente
 #define PIN_SNB_EFLU 23           // Pino do sensor de nível baixo tanque efluente
 
-/* ----- Saídas Digitais ----- */
+/***** Saídas Digitais *****/
 // Comunicação 74HC595
-#define CLK 25    // Clock do registrador de deslocamento. Cada pulso nesse pino lê o bit que está na entrada DS e o desloca internamente.
-#define LATCH 26  // Clock de armazenamento ou Latch. Storage Register Clock. Um pulso aqui transfere os dados armazenados internamente para os pinos de saída (Q0–Q7) de uma só vez
+#define CLK 25    // Clock do registrador de deslocamento. Cada pulso nesse pino lê o bit que está na entrada DS e o desloca internamente um a um.
+#define LATCH 26  // Clock de armazenamento ou Latch. Um pulso aqui transfere os dados armazenados internamente para os pinos de saída (Q0–Q7) de uma só vez
 #define DADOS 27  // Entrada de dados serial. É por onde os bits entram no chip, um de cada vez.
 
 // Bombas de transferência
@@ -79,30 +84,33 @@
 // Instancia da estrutura do processo
 Processo processo;
 
-/************************************/
-/*****  TANQUE DE ARMAZENAMENTO *****/
-/************************************/
+/*******************************************************************************************************************************/
+/*****  TANQUE DE ARMAZENAMENTO ************************************************************************************************/
+/*******************************************************************************************************************************/
+// Sensores
+SensorTemperatura tempArmaz = SensorTemperatura(PIN_TEMP_INICIAL);  // Temperatura
+
 // Atuadores
-std::vector<SaidaDigital> saidasArmazenamento = {SaidaDigital(PIN_BOMBA_PM1)};
+std::vector<SaidaDigital> saidasArmazenamento = {SaidaDigital(PIN_BOMBA_PM1)};  // Bomba de Transferencia de agua
 
 // Instancia
-Tanque tanqueArmazenamento = Tanque(saidasArmazenamento, PIN_SNA_ARMAZENAMENTO, PIN_SNB_ARMAZENAMENTO);
+Tanque tanqueArmazenamento = Tanque(saidasArmazenamento, PIN_SNA_ARMAZENAMENTO, PIN_SNB_ARMAZENAMENTO);  // Instancia do tanque
 
-/************************************/
-/******* TANQUE DE EFLUENTES ********/
-/************************************/
+/*******************************************************************************************************************************/
+/******* TANQUE DE EFLUENTES ***************************************************************************************************/
+/*******************************************************************************************************************************/
 // Atuadores
 std::vector<SaidaDigital> saidasEfluentes = {SaidaDigital(PIN_BOMBA_PM3)};
 
 // Instancia
 Tanque tanqueEfluentes = Tanque(saidasEfluentes, PIN_SNA_EFLU, PIN_SNB_EFLU);
 
-/************************************/
-/********* TANQUE DE ATIVOS *********/
-/************************************/
+/*******************************************************************************************************************************/
+/********* TANQUE DE ATIVOS ****************************************************************************************************/
+/*******************************************************************************************************************************/
 // Sensores
 SensorTemperatura tempAtiv = SensorTemperatura(PIN_TEMP_ATIVOS);                        // Temperatura
-SensorTurbidez ntuArmaz = SensorTurbidez(PIN_TBDZ_ATIVOS, 5, 2.0f, 0.0f);               // Turbidez
+SensorTurbidez ntuArmaz = SensorTurbidez(PIN_TBDZ_INICIAL, 5, 2.0f, 0.0f);              // Turbidez
 SensorPH phAtivos = SensorPH(PIN_PH_ATIVOS, 5, 4.0f, 3705.5, 3105.0f, 10.0f, 2684.0f);  // Ph
 
 // Atuadores
@@ -120,9 +128,9 @@ std::vector<SaidaDigital> saidasAtivos = {
 // Instancia
 TanqueTratamento tanqueAtivos = TanqueTratamento(tempAtiv, phAtivos, ntuArmaz, saidasAtivos, PIN_SNA_ATIVOS, PIN_SNB_ATIVOS);
 
-/************************************/
-/*********** TANQUE FINAL ***********/
-/************************************/
+/*******************************************************************************************************************************/
+/*********** TANQUE FINAL ******************************************************************************************************/
+/*******************************************************************************************************************************/
 // Sensores
 SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);                      // Temperatura
 SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 5, 2.0f, 0.0f);              // Turbidez
@@ -134,7 +142,9 @@ std::vector<SaidaDigital> saidasFinal = {SaidaDigital(PIN_RM2_FINAL), SaidaDigit
 // Instancia
 TanqueTratamento tanqueFinal = TanqueTratamento(tempFinal, phFinal, ntuFinal, saidasFinal, PIN_SNA_FINAL, PIN_SNB_FINAL);
 
-/* ----- Variáveis utilitárias e de controle do processo ----- */
+/*******************************************************************************************************************************/
+/***** VARIÁVEIS UTILITÁRIAS E DE CONTROLE DO PROCESSO *************************************************************************/
+/*******************************************************************************************************************************/
 // Parâmetros de tempo (em milisegundos)
 int tempoDeVerificacao = 1000;         // Tempo para verificar o nível dos tanques
 int tempoDosagemCoagulante = 5000;     // Tempo total de dosagem do coagulante
@@ -173,10 +183,12 @@ MqttManager mqtt = MqttManager(WIFI_SSID, WIFI_SENHA, MQTT_BROKER, MQTT_PORTA, M
 JsonDocument telemetria;  // Objeto Json que será enviado ao broker mqtt com os dados do processo
 
 char bufferTelemetria[1025];  // Buffer para armazenar a telemetria em formato JSON antes de enviar ao broker MQTT
+char dataHoraAtual[25];       // Buffer para armazenar a data e hora atual em formato de string, static garante que a variável permaneça na memória
 
-char dataHoraAtual[25];  // Buffer para armazenar a data e hora atual em formato de string, static garante que a variável permaneça na memória
-
-/* ----- Configuração inicial ----- */
+/*******************************************************************************************************************************/
+/***** SETUP *******************************************************************************************************************/
+/*******************************************************************************************************************************/
+// Configuração inicial
 void setup() {
   delay(1000);  // Aguarda 1 segundo para garantir que o sistema esteja estável antes de iniciar a configuração
 
@@ -203,6 +215,7 @@ void setup() {
       "nivel_alto" : false,
       "nivel_baixo" : false,
       "bomba_pm1" : false,
+      "temperatura" : 0.0,
       "turbidez" : 0.0
     },
     "tanque_ativos": {
@@ -241,7 +254,7 @@ void setup() {
     Serial.println(erro.f_str());
   }
 
-  delay(5000);  // Aguarda 5 segundos para garantir que o sistema esteja estável antes sincronizar a hora com o servidor NTP
+  delay(5000);  // Aguarda 5 segundos para garantir que o sistema esteja estável antes de sincronizar a hora com o servidor NTP
 
   // Configuração de data e hora
   configTime(-3 * 3600, 0, "pool.ntp.org");  // Configura o fuso horário para o horário de Brasília (UTC-3) e define o servidor NTP para sincronização do tempo
@@ -260,6 +273,9 @@ void setup() {
   dtUpdate = millis();  // Inicializa o temporizador de atualização da telemetria
 }
 
+/*******************************************************************************************************************************/
+/***** ATUALIZA DATA E HORA ****************************************************************************************************/
+/*******************************************************************************************************************************/
 // Atualiza a data e hora atual em formato de (YYYY-MM-DDTHH:MM:SSZ)
 void atualizaDataHoraAtual() {
   struct tm infoData;
@@ -268,6 +284,9 @@ void atualizaDataHoraAtual() {
   }
 }
 
+/*******************************************************************************************************************************/
+/***** ATUALIZA TELEMETRIA *****************************************************************************************************/
+/*******************************************************************************************************************************/
 // Atualiza os dados no documento json e o buffer para facilitar o envio da mensagem
 void atualizaTelemetria() {
   atualizaDataHoraAtual();
@@ -277,14 +296,15 @@ void atualizaTelemetria() {
   telemetria["etapa_processo"] = processo.etapaProcessoToString(processo.etapaAtual);
 
   // Tanque de armazenamento
-  telemetria["tanque_armazenamento"]["nivel_alto"] = tanqueArmazenamento.isNivelAlto();
-  telemetria["tanque_armazenamento"]["nivel_baixo"] = tanqueArmazenamento.isNivelBaixo();
+  telemetria["tanque_armazenamento"]["nivel_alto"] = tanqueArmazenamento.getEstadoNivelAlto();
+  telemetria["tanque_armazenamento"]["nivel_baixo"] = tanqueArmazenamento.getEstadoNivelBaixo();
   telemetria["tanque_armazenamento"]["bomba_pm1"] = tanqueArmazenamento.isAtuadorLigado(0);
+  telemetria["tanque_armazenamento"]["temperatura"] = tempArmaz.getTemperatura();
   telemetria["tanque_armazenamento"]["turbidez"] = ntuArmaz.getTurbidez();
 
   // Tanque de ativos
-  telemetria["tanque_ativos"]["nivel_alto"] = tanqueAtivos.isNivelAlto();
-  telemetria["tanque_ativos"]["nivel_baixo"] = tanqueAtivos.isNivelBaixo();
+  telemetria["tanque_ativos"]["nivel_alto"] = tanqueAtivos.getEstadoNivelAlto();
+  telemetria["tanque_ativos"]["nivel_baixo"] = tanqueAtivos.getEstadoNivelBaixo();
   telemetria["tanque_ativos"]["bomba_pm2"] = tanqueAtivos.isAtuadorLigado(0);
   telemetria["tanque_ativos"]["mexedor_rm1"] = tanqueAtivos.isAtuadorLigado(1);
   telemetria["tanque_ativos"]["dosador_fecl3_dm1"] = tanqueAtivos.isAtuadorLigado(2);
@@ -296,13 +316,13 @@ void atualizaTelemetria() {
   telemetria["tanque_ativos"]["ph"] = tanqueAtivos.getPH();
 
   // Tanque de efluentes
-  telemetria["tanque_efluentes"]["nivel_alto"] = tanqueEfluentes.isNivelAlto();
-  telemetria["tanque_efluentes"]["nivel_baixo"] = tanqueEfluentes.isNivelBaixo();
+  telemetria["tanque_efluentes"]["nivel_alto"] = tanqueEfluentes.getEstadoNivelAlto();
+  telemetria["tanque_efluentes"]["nivel_baixo"] = tanqueEfluentes.getEstadoNivelBaixo();
   telemetria["tanque_efluentes"]["bomba_pm3"] = tanqueEfluentes.isAtuadorLigado(0);
 
   // Tanque final
-  telemetria["tanque_final"]["nivel_alto"] = tanqueFinal.isNivelAlto();
-  telemetria["tanque_final"]["nivel_baixo"] = tanqueFinal.isNivelBaixo();
+  telemetria["tanque_final"]["nivel_alto"] = tanqueFinal.getEstadoNivelAlto();
+  telemetria["tanque_final"]["nivel_baixo"] = tanqueFinal.getEstadoNivelBaixo();
   telemetria["tanque_final"]["mexedor_rm2"] = tanqueFinal.isAtuadorLigado(0);
   telemetria["tanque_final"]["lampada_uv"] = tanqueFinal.isAtuadorLigado(1);
   telemetria["tanque_final"]["temperatura"] = tanqueFinal.getTemperatura();
@@ -312,26 +332,34 @@ void atualizaTelemetria() {
   serializeJson(telemetria, bufferTelemetria);
 }
 
-/* ----- Loop principal ----- */
+/*******************************************************************************************************************************/
+/***** LOOP PRINCIPAL **********************************************************************************************************/
+/*******************************************************************************************************************************/
 void loop() {
-  // TODO: Implementar alertas
+  
 
-  mqtt.handle();  // Processa os comandos recebidos do broker MQTT
-                  // TODO: Tratar o recebimento de comandos do broker MQTT e atualizar o processo conforme necessário
+  // Processa os comandos recebidos do broker MQTT
+  // Verifica se existe alguma mensagem recebida do broker MQTT e processa a mensagem
+  if (mqtt.handle()) {
+    // TODO: Tratar o recebimento de comandos do broker MQTT e atualizar o processo conforme necessário
+  }
 
   // Envia as informações do processo para o broker MQTT
   if (((millis() - dtUpdate) >= tempoUpdate) && mqtt.isConnected()) {
-    atualizaTelemetria();                               // Atualiza os dados do processo no objeto JSON e no buffer para envio
+    atualizaTelemetria();  // Atualiza os dados do processo no objeto JSON e no buffer para envio
     mqtt.publish(TOPICO_TELEMETRIA, bufferTelemetria);  // Envia a telemetria atualizada para o broker MQTT no tópico definido
-    dtUpdate = millis();                                // Atualiza o temporizador de atualização da telemetria para o próximo envio
+    dtUpdate = millis();  // Atualiza o temporizador de atualização da telemetria para o próximo envio
+
+    // TODO: Implementar alertas
+    // se alerta mqtt.publish(TOPICO_ALERTAS, "ALERTA");
   }
 
   // IMPORTANT: Essas condições vão desligar as bombas imediatamente quando dependendo do nível dos tanques
   // a etapa de verificação de nível fica obsoleta nesse caso
 
-  /**************************************/
-  /*** Condições sem etapa específica ***/
-  /**************************************/
+  /******************************************/
+  /***** Condições sem etapa específica *****/
+  /******************************************/
 
   // Tanque armazenamento
   if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (TAR.1) Se armazenamento nível baixo ou ativos nível alto
@@ -357,11 +385,12 @@ void loop() {
     tanqueEfluentes.desligaAtuador(0);                                               // Desaciona PM3
   }
 
-  /*************************/
-  /*** Modos de Operação ***/
-  /*************************/
+  /******************************************/
+  /***** Modos de operação ******************/
+  /******************************************/
 
-  /* Emergencia
+  /**
+   * Emergencia
    * O modo de Emergencia interrompe todo o processo.
    * Desligando todos os atuadores e garante que o processo reiniciará caso velte ao normal
    */
@@ -385,7 +414,8 @@ void loop() {
     return;
   }
 
-  /* Manual
+  /**
+   * Manual
    * O modo de Manual vai apenas interpretar os comandos enviádos pelo supervisório
    */
   if (processo.modoOperacao == Processo::ModoOperacao::Manual) {
@@ -396,7 +426,8 @@ void loop() {
     return;
   }
 
-  /* Parada
+  /*
+   * Parada
    * O modo de Parada vai esperar a etapa atual finalizar e interromper o processo. Quando voltar para o modo auto continua de onde parou
    */
   if (processo.modoOperacao == Processo::ModoOperacao::Parada) {
@@ -405,9 +436,9 @@ void loop() {
     }
   }
 
-  /******************************/
-  /*** Processo de tratamento ***/
-  /******************************/
+  /**********************************/
+  /***** Processo de tratamento *****/
+  /**********************************/
 
   /* Tanque de Armazenamento */
   // Inicio -> Verificação de Nível -> Esvaziando Armazenamento //
@@ -572,7 +603,7 @@ void loop() {
           dtCoagulacao = millis();                                           // (4.6) Atualiza temporizador de coagulação
         }
       } else if (ph > alvoPhCoagulante + histerese) {                 // (4.7) Se pH alcalino
-        dtPausaDosagem = millis();                             // (4.7) Atualiza temporizador de dosagem do coagulante
+        dtPausaDosagem = millis();                                    // (4.7) Atualiza temporizador de dosagem do coagulante
         processo.controleEtapa = Processo::Etapa::DosandoCoagulante;  // (4.7) Atualiza controle do processo indicando a proxima etapa como DosandoCoagulante
       }
 

@@ -17,9 +17,11 @@ class Tanque {
  public:
   Tanque(const std::vector<SaidaDigital>& atuadores, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo);
 
-  bool isNivelAlto();      // Função que indica se o nível da água do tanque está alto
-  bool isNivelBaixo();     // Função que indica se o tanque está vazio
-  bool isFalhaSensores();  // Função que indica se exite falha nos sensores.
+  bool isNivelAlto();          // Função que indica se o nível da água do tanque está alto
+  bool isNivelBaixo();         // Função que indica se o tanque está vazio
+  bool isFalhaSensores();      // Função que indica se exite falha nos sensores.
+  bool getEstadoNivelAlto();   // Função que retorna o estado do sensor de nível alto
+  bool getEstadoNivelBaixo();  // Função que retorna o estado do sensor de nível baixo
 
   bool isAtuadorLigado(uint8_t indiceAtuador);  // Função responsável por indicar o estado do atuador indicado.
   bool hasAtuador(uint8_t indiceAtuador);       // Verifica se existe um atuador no indice indicado

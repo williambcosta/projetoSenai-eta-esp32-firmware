@@ -48,6 +48,16 @@ bool Tanque::isFalhaSensores() {
   return false;
 }
 
+// Função que retorna o estado do sensor de nível alto
+bool Tanque::getEstadoNivelAlto() {
+  return digitalRead(this->pinoNivelAlto) == HIGH;
+}
+
+// Função que retorna o estado do sensor de nível baixo
+bool Tanque::getEstadoNivelBaixo() {
+  return digitalRead(this->pinoNivelBaixo) == HIGH;
+}
+
 /**
  * Função responsável por indicar o estado do atuador indicado.
  *
