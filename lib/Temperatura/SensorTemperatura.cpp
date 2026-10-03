@@ -20,6 +20,7 @@ SensorTemperatura::SensorTemperatura(uint8_t pinoOneWire) {
   oneWire = OneWire(pinoOneWire);
   sensor = DallasTemperature(&oneWire);
   sensor.begin();
+  sensor.setWaitForConversion(false);  // Configura o sensor para não esperar a conversão desabilitando o delay bloqueante de conversão
 }
 
 // Retorna a temperatura em  graus Celsios
@@ -28,6 +29,7 @@ float SensorTemperatura::getTemperatura() {
 
   if (sensor.getAddress(enderecoSensor, 0)) {       // Caso exista algum sensor conectado
     temperatura = sensor.getTempC(enderecoSensor);  // Atualiza o valor da temperatura
+    sensor.requestTemperatures();                   // Solicita assincronamente a conversão para a próxima leitura
   } else {
     temperatura = -999.9;  // Caso não exista sensor conectado, retorna valor padrão.
   }

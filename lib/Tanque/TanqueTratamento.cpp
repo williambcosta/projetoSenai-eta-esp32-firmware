@@ -1,6 +1,7 @@
 /**
- * Classe que representa o tanque de água em tratamento. É responsável por gerenciar os sensores e atuadores específicos desse tanque,
- * além dos comuns a todos os tanques, sendo eles: sensor de turbidez, sensor de pH e sensor de temperatura.
+ * Classe que representa o tanque de água em tratamento. É responsável por gerenciar os sensores e atuadores específicos desse tanque
+ * 
+ * Vide documentação da classe pai Tanque.h para mais detalhes
  */
 
 #include "TanqueTratamento.h"
@@ -12,7 +13,7 @@ TanqueTratamento::TanqueTratamento(SensorTemperatura& sensorTemp, SensorPH& sens
       temperatura(sensorTemp), turbidez(sensorTurbidez), ph(sensorPH) {
 }
 
-// Função que retornan a temperatura da água do tanque em C°
+// Função que retorna a temperatura da água do tanque em C°
 float TanqueTratamento::getTemperatura() {
   return temperatura.getTemperatura();
 }

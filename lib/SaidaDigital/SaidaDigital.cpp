@@ -8,19 +8,17 @@
  *
  * Utiliza o Singleton ShiftRegister para controlar o registrador de deslocamento.
  *
- * É importante chamar a funcão loop passando millis() como parametro para que o tempo seja atualizado
- *
  */
 
 #include "SaidaDigital.h"
 
 SaidaDigital::SaidaDigital(std::string saida) {
-  this->byteSaida = saida[0] - '0';           // Converte o caractere do byte para um índice numérico
-  this->bitSaida = saida[2] - '0';            // Converte o caractere do bit para um índice numérico
+  this->byteSaida = saida[0] - '0';  // Converte o caractere do byte para um índice numérico
+  this->bitSaida = saida[2] - '0';   // Converte o caractere do bit para um índice numérico
 }
 
 SaidaDigital::SaidaDigital(std::string saida, uint8_t nivelAtuacao) : SaidaDigital(saida) {
-  this->nivelAtuacao = nivelAtuacao;
+  setNivelAtuacao(nivelAtuacao);
 }
 
 SaidaDigital::SaidaDigital(uint8_t byteSaida, uint8_t bitSaida) {
@@ -29,12 +27,23 @@ SaidaDigital::SaidaDigital(uint8_t byteSaida, uint8_t bitSaida) {
 }
 
 SaidaDigital::SaidaDigital(uint8_t byteSaida, uint8_t bitSaida, uint8_t nivelAtuacao) : SaidaDigital(byteSaida, bitSaida) {
-  this->nivelAtuacao = nivelAtuacao;
+  setNivelAtuacao(nivelAtuacao);
 }
 
 // Retorna o estado atual do SaidaDigital. TRUE = ligado, FALSE = desligado
 bool SaidaDigital::getStatus() {
-  return estado;
+  return ShiftRegister::Instance().isAtuado(this->byteSaida, this->bitSaida);
+}
+
+// Função responsável por verificar se a saída está atuada (ligada) levando em consideração o nível lógico de atuação definido.
+bool SaidaDigital::isAtuado() {
+  if(ShiftRegister::Instance().isAtuado(this->byteSaida, this->bitSaida) && nivelAtuacao == HIGH) {
+    return true;
+  } else if(!ShiftRegister::Instance().isAtuado(this->byteSaida, this->bitSaida) && nivelAtuacao == LOW) {
+    return true;
+  }
+
+  return false;
 }
 
 // Função responsável por ligar o SaidaDigital
@@ -55,15 +64,13 @@ void SaidaDigital::desliga() {
   }
 }
 
-// TODO: Finalizar a implementação das funções desligaApos
-// TODO: Na verdade não vou fazer mais. Vai aumentar muito a complexidade, não tenho tempo pra isso agora
-/*
-// Função responsável por desligar a saída após o tempo determinado em minutos. O valor será limitado a 255 minutos
-void SaidaDigital::desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint8_t minutos) {
-  liga(byteSaida, bitSaida);
+// Função responsável por definir o nível lógico usado para ativar a saída. Se deve atuar em HIGH ou LOW
+void SaidaDigital::setNivelAtuacao(uint8_t nivelAtuacao) {
+  this->nivelAtuacao = nivelAtuacao;
+  if (nivelAtuacao == HIGH) {
+    ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, LOW);
+  } else {
+    ShiftRegister::Instance().setSaida(this->byteSaida, this->bitSaida, HIGH);
+  }
 }
 
-// Função responsável por desligar a saída após o tempo determinado em segundos. O valor será limitado a 15300 segundos
-void SaidaDigital::desligaApos(uint8_t byteSaida, uint8_t bitSaida, uint16_t segundos) {
-}
-*/
