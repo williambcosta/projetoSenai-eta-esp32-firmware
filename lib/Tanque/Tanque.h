@@ -28,6 +28,7 @@ class Tanque {
 
   void ligaAtuador(uint8_t indiceAtuador);     // Liga o atuador indicado.
   void desligaAtuador(uint8_t indiceAtuador);  // Desliga o atuador indicado.
+  void comutaAtuador(uint8_t indiceAtuador);   // Comuta o estado do atuador indicado.
   void begin();                                // Funcão responsável por configurar os pinos de entrada de nível do tanque
 };
 

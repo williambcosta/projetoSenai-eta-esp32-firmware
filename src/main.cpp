@@ -336,53 +336,83 @@ void atualizaTelemetria() {
 /***** LOOP PRINCIPAL **********************************************************************************************************/
 /*******************************************************************************************************************************/
 void loop() {
-  
+  /******************************************/
+  /***** Tratamento de comandos *************/
+  /******************************************/
 
   // Processa os comandos recebidos do broker MQTT
   // Verifica se existe alguma mensagem recebida do broker MQTT e processa a mensagem
   if (mqtt.handle()) {
-    // TODO: Tratar o recebimento de comandos do broker MQTT e atualizar o processo conforme necessário
+    // Alterando o modo de operação de acordo com a mensagem recebida do broker MQTT
+    if (mqtt.getMensagem() == "MANUAL") {
+      Serial.println("Alterando para o modo manual");
+      processo.modoOperacao = Processo::ModoOperacao::Manual;
+    } else if (mqtt.getMensagem() == "AUTOMATICO") {
+      Serial.println("Alterando para o modo automático");
+      processo.modoOperacao = Processo::ModoOperacao::Automatico;
+    } else if (mqtt.getMensagem() == "EMERGENCIA") {
+      Serial.println("Alterando para o modo emergência");
+      processo.modoOperacao = Processo::ModoOperacao::Emergencia;
+    }
+
+    /**
+     * Manual
+     * O modo de Manual vai apenas interpretar os comandos enviádos pelo supervisório
+     */
+    if (processo.modoOperacao == Processo::ModoOperacao::Manual) {
+      // TODO: Garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com HVK2 ligado etapa vai ser esvaziando tanque Ativos
+
+      if (mqtt.getMensagem() == "PM1") {                                                      // Caso comando PM1
+        if (tanqueArmazenamento.isAtuadorLigado(0)) {                                         // Se a bomba PM1 estiver ligada, indica que o comando é para ligar a bomba
+          tanqueArmazenamento.desligaAtuador(0);                                              // Desliga a bomba
+          processo.controleEtapa = Processo::Etapa::Inicial;                                  // Atualiza o controle do processo para voltar ao inicio caso o modo de operação volte a automatico
+        } else {                                                                              // Caso esteja desligada, indica que o comando é para ligar
+          if (tanqueArmazenamento.isNivelBaixo()) {                                           // Se tanque inicial em nível baixo
+            mqtt.addMensagemAlerta("Impossível Ligar PM1: Tanque inicial em nível baixo.");   // Envia alerta
+          } else if (tanqueAtivos.isNivelAlto()) {                                            // Caso Tanque de ativos em nível alto
+            mqtt.addMensagemAlerta("Impossível Ligar PM1: Tanque de ativos em nível alto.");  // Envia alerta
+          } else {                                                                            // Caso condições permitam
+            tanqueArmazenamento.ligaAtuador(0);                                               // Aciona bomba PM1
+            processo.controleEtapa = Processo::Etapa::EsvaziandoTqArmaz;                      // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
+          }
+        }
+      } else if (mqtt.getMensagem() == "PM2") {                                           // Caso comando PM2
+        if (tanqueAtivos.isAtuadorLigado(0)) {                                            // Verifica se a bomba está ligada, indicando que o comando é para desligar
+          tanqueAtivos.desligaAtuador(0);                                                 // Desliga bomba PM1
+          tanqueAtivos.desligaAtuador(5);                                                 // Desliga solenoide HVK1
+          tanqueAtivos.desligaAtuador(6);                                                 // Desliga solenoide HVK2
+        } else {                                                                          // Caso a bomba esteja desligada, indicando que é para ligar a mesma
+          if (tanqueAtivos.isAtuadorLigado(5) || tanqueAtivos.isAtuadorLigado(6)) {       // verifica se alguma solenoide está ativa
+            tanqueAtivos.ligaAtuador(0);                                                  // Liga a bomba
+          } else {                                                                        // Caso nenhuma solenoide esteja acionada
+            mqtt.addMensagemAlerta("Impossível Ligar PM2: Nenhuma solenoide acionada.");  // Envia alerta
+          }
+        }
+      } else if (mqtt.getMensagem() == "PM3") {
+        tanqueEfluentes.comutaAtuador(0);
+      } else if (mqtt.getMensagem() == "DM1") {
+        tanqueAtivos.comutaAtuador(2);
+      } else if (mqtt.getMensagem() == "DM2") {
+        tanqueAtivos.comutaAtuador(3);
+      } else if (mqtt.getMensagem() == "DM3") {
+        tanqueAtivos.comutaAtuador(4);
+      }
+    }
   }
+
+  /******************************************/
+  /***** Envio de mensagens *****************/
+  /******************************************/
 
   // Envia as informações do processo para o broker MQTT
   if (((millis() - dtUpdate) >= tempoUpdate) && mqtt.isConnected()) {
-    atualizaTelemetria();  // Atualiza os dados do processo no objeto JSON e no buffer para envio
+    atualizaTelemetria();                               // Atualiza os dados do processo no objeto JSON e no buffer para envio
     mqtt.publish(TOPICO_TELEMETRIA, bufferTelemetria);  // Envia a telemetria atualizada para o broker MQTT no tópico definido
-    dtUpdate = millis();  // Atualiza o temporizador de atualização da telemetria para o próximo envio
+    mqtt.publicarMensagensAlerta();                     // Publica mensagens de alerta acumuladas no buffer, caso existam
+    dtUpdate = millis();                                // Atualiza o temporizador de atualização da telemetria para o próximo envio
 
     // TODO: Implementar alertas
     // se alerta mqtt.publish(TOPICO_ALERTAS, "ALERTA");
-  }
-
-  // IMPORTANT: Essas condições vão desligar as bombas imediatamente quando dependendo do nível dos tanques
-  // a etapa de verificação de nível fica obsoleta nesse caso
-
-  /******************************************/
-  /***** Condições sem etapa específica *****/
-  /******************************************/
-
-  // Tanque armazenamento
-  if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (TAR.1) Se armazenamento nível baixo ou ativos nível alto
-    tanqueArmazenamento.desligaAtuador(0);                                 // Desliga bomba PM1
-  }
-
-  // Tanque ativos
-  if (tanqueAtivos.isNivelBaixo()) {
-    tanqueAtivos.desligaAtuador(1);  // Desliga mexedor
-    tanqueAtivos.desligaAtuador(0);  // Desliga bomba PM2
-  }
-
-  // Tanque Final
-  if (tanqueFinal.isNivelBaixo()) {  // (TF.1) Se tanque final nível baixo
-    tanqueFinal.desligaAtuador(0);   // Desliga mexedor
-    tanqueFinal.desligaAtuador(1);   // Desliga lampada UV
-  }
-
-  // Tanque Efluentes
-  if (tanqueEfluentes.isNivelAlto() && !tanqueArmazenamento.isNivelAlto()) {         // (TE.1) Se tanque de efluentes nível alto e tanque de armazenamento não nível alto
-    tanqueEfluentes.ligaAtuador(0);                                                  // Aciona PM3
-  } else if (tanqueEfluentes.isNivelBaixo() || tanqueArmazenamento.isNivelAlto()) {  // (TE.2) Se tanque de armazenamento nível alto || efluentes baixo
-    tanqueEfluentes.desligaAtuador(0);                                               // Desaciona PM3
   }
 
   /******************************************/
@@ -410,30 +440,38 @@ void loop() {
     tanqueFinal.desligaAtuador(0);
     tanqueFinal.desligaAtuador(1);
 
-    processo.etapaAtual = processo.controleEtapa = processo.controleParada = Processo::Etapa::Inicial;
+    processo.etapaAtual = processo.controleEtapa = Processo::Etapa::Inicial;
     return;
   }
 
-  /**
-   * Manual
-   * O modo de Manual vai apenas interpretar os comandos enviádos pelo supervisório
-   */
-  if (processo.modoOperacao == Processo::ModoOperacao::Manual) {
-    // TODO: Implementar Comandos recebidos
-    // TODO: Interpretar os comandos enviados por MQTT aqui
-    // TODO: Garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com HVK2 ligado etapa vai ser esvaziando tanque Ativos
+  /******************************************/
+  /***** Condições sem etapa específica *****/
+  /******************************************/
 
-    return;
+  // IMPORTANT: Essas condições vão desligar as bombas imediatamente quando dependendo do nível dos tanques
+  // a etapa de verificação de nível fica obsoleta nesse caso
+  // Tanque armazenamento
+  if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (TAR.1) Se armazenamento nível baixo ou ativos nível alto
+    tanqueArmazenamento.desligaAtuador(0);                                 // Desliga bomba PM1
   }
 
-  /*
-   * Parada
-   * O modo de Parada vai esperar a etapa atual finalizar e interromper o processo. Quando voltar para o modo auto continua de onde parou
-   */
-  if (processo.modoOperacao == Processo::ModoOperacao::Parada) {
-    if (processo.controleParada != processo.etapaAtual) {
-      return;
-    }
+  // Tanque ativos
+  if (tanqueAtivos.isNivelBaixo()) {
+    tanqueAtivos.desligaAtuador(1);  // Desliga mexedor
+    tanqueAtivos.desligaAtuador(0);  // Desliga bomba PM2
+  }
+
+  // Tanque Final
+  if (tanqueFinal.isNivelBaixo()) {  // (TF.1) Se tanque final nível baixo
+    tanqueFinal.desligaAtuador(0);   // Desliga mexedor
+    tanqueFinal.desligaAtuador(1);   // Desliga lampada UV
+  }
+
+  // Tanque Efluentes
+  if (tanqueEfluentes.isNivelAlto() && !tanqueArmazenamento.isNivelAlto()) {         // (TE.1) Se tanque de efluentes nível alto e tanque de armazenamento não nível alto
+    tanqueEfluentes.ligaAtuador(0);                                                  // Aciona PM3
+  } else if (tanqueEfluentes.isNivelBaixo() || tanqueArmazenamento.isNivelAlto()) {  // (TE.2) Se tanque de armazenamento nível alto || efluentes baixo
+    tanqueEfluentes.desligaAtuador(0);                                               // Desaciona PM3
   }
 
   /**********************************/
@@ -488,7 +526,6 @@ void loop() {
   // 7.1 - Se tempo de coagulação for atingido
   // 7.2 - Se ntu alvo atingido, Aciona HVK1
   // 7.3 - Atualiza o temporizador de descarga de efluentes --------------------------------------> PreparandoLibercaoEfluentes
-  // 7.4 - Caso ntu não atingido talvez nova dosagem de alcalinizante // TODO: talvez recomeçãr dosagem de coagulante
 
   // Descarga de Efluentes //
   // 7.5 - Se tempo de verificação, Acionando PM2, atualiza temporizador de descarga -------------> LiberandoEfluentes
@@ -704,6 +741,4 @@ void loop() {
       processo.etapaAtual = Processo::Etapa::Finalizado;       // (-> 9.7) Muda etapa do processo para Finalizado
     }
   }
-
-  processo.controleParada = processo.etapaAtual;  // Atualiza o controle de parada para garantir que a etapa atual finalize antes de pausar o processo
 }

@@ -38,6 +38,11 @@ class MqttManager {
 
   static MqttManager* _instance;  // Ponteiro estático para armazenar a instância atual da classe
 
+  char poolMsg[10][256];  // Buffer para armazenar mensagens curtas a serem publicadas
+  int inicio = 0;         // Onde a próxima mensagem será gravada
+  int fim = 0;            // De onde a próxima mensagem será lida/enviada
+  int totalMsgs = 0;      // Quantidade atual de mensagens acumuladas
+
   // Controle de reconexão não-bloqueante
   unsigned long ultimoIntervaloReconexao = 0;
   const unsigned long intervaloReconexao = 5000;  // Tenta reconectar a cada 5 segundos
@@ -58,6 +63,9 @@ class MqttManager {
   bool handle();                                                                                                                  // Função responsável por chamar o loop do cliente MQTT e manter a conexão ativa
   bool publish(uint8_t topico, const char* mensagem);                                                                             // Função para publicar mensagens em um tópico específico
   bool isConnected();                                                                                                             // Função para verificar se o cliente MQTT está conectado ao servidor
+  bool addMensagemAlerta(const char* mensagem);                                                                                    // Função para adicionar uma mensagem ao buffer de mensagens a serem publicadas
+  bool publicarProximaMensagemAlerta();                                                                                                   // Função para enviar a próxima mensagem do buffer de mensagens curtas
+  bool publicarMensagensAlerta();                                                                                                 // Função para publicar todas as mensagens curtas armazenadas no buffer
 
   String getMensagem() const { return msgAtual; };  // Retorna a última mensagem recebida
 

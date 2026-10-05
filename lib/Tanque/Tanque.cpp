@@ -90,6 +90,15 @@ void Tanque::desligaAtuador(uint8_t indiceAtuador) {
   }
 }
 
+// Comuta o estado do atuador indicado. Caso o mesmo esteja ligado, desliga. Caso esteja desligado, liga.
+void Tanque::comutaAtuador(uint8_t indiceAtuador) {
+  if (isAtuadorLigado(indiceAtuador)) {
+    desligaAtuador(indiceAtuador);
+  } else {
+    ligaAtuador(indiceAtuador);
+  }
+}
+
 // Funcão responsável por configurar os pinos de entrada de nível do tanque
 void Tanque::begin() {
   pinMode(this->pinoNivelAlto, INPUT_PULLUP);

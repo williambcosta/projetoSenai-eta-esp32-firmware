@@ -102,8 +102,8 @@ bool MqttManager::handle() {
       reconnect();
     }
   }
-  
-  if(msgAtual != ultimaMsg) {
+
+  if (msgAtual != ultimaMsg) {
     ultimaMsg = msgAtual;
     return true;
   } else {
@@ -137,4 +137,43 @@ bool MqttManager::publish(uint8_t topico, const char* mensagem) {
 // Função para verificar se o cliente MQTT está conectado ao servidor
 bool MqttManager::isConnected() {
   return client.connected();  // Retorna o estado da conexão com o servidor MQTT
+}
+
+// Função para adicionar uma mensagem ao buffer de mensagens a serem publicadas
+bool MqttManager::addMensagemAlerta(const char* mensagem) {
+  if (totalMsgs >= 10) {
+    return false;  // Fila cheia
+  }
+
+  snprintf(poolMsg[inicio], 256, "%s", mensagem);  // Copia a mensagem para o buffer
+  inicio = (inicio + 1) % 10;                      // Avança o índice e volta ao 0 quando chega em 10
+  totalMsgs++;                                     // Incrementa o total de mensagens acumuladas
+
+  return true;
+}
+
+// Consome e envia a mensagem mais antiga
+bool MqttManager::publicarProximaMensagemAlerta() {
+  if (totalMsgs == 0) {
+    return false;  // Fila vazia
+  }
+
+  if (!publish(TOPICO_ALERTAS, poolMsg[fim])) {
+    return false;  // Caso o envio falhe retorna false
+  }
+
+  fim = (fim + 1) % 10;  // Avança a leitura
+  totalMsgs--;
+
+  return true;
+}
+
+// Função para publicar todas as mensagens curtas armazenadas no buffer
+bool MqttManager::publicarMensagensAlerta() {
+  while (totalMsgs > 0) {
+    if (!publicarProximaMensagemAlerta()) {  // Caso o envio de alguma mensagem falhar retorna false
+      return false;
+    }
+  }
+  return true;
 }
