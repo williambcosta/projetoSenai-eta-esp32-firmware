@@ -35,14 +35,14 @@ void MqttManager::reconnect() {
   }
 
   // Se Wi-Fi está OK, tenta conectar ao MQTT Broker
-  if (!client.connected()) {
-    String clientId = "ESP32-ETA-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+  if (!client.connected()) {                                                    // verifica se o cliente MQTT está conectado
+    String clientId = "ESP32-ETA-" + String((uint32_t)ESP.getEfuseMac(), HEX);  // Cria um id único para o cliente MQTT baseado no MAC do ESP32
     Serial.print("Tentando conexão MQTT com HiveMQ...");
 
-    if (client.connect(clientId.c_str(), mqtt_usuario, mqtt_senha)) {
+    if (client.connect(clientId.c_str(), mqtt_usuario, mqtt_senha)) {  // Tenta conectar ao broker MQTT com o id único e as credenciais fornecidas
       Serial.println("conectado!");
-      if (mqtt_topico_comandos != nullptr) {
-        client.subscribe(mqtt_topico_comandos);
+      if (mqtt_topico_comandos != nullptr) {     // Se o tópico de comandos foi definido
+        client.subscribe(mqtt_topico_comandos);  // Assina o tópico de comandos para receber mensagens
       }
     } else {
       Serial.print("Falha: ");
