@@ -16,19 +16,12 @@
 #include "ShiftRegister.h"
 #include "Tanque.h"
 #include "TanqueTratamento.h"
-#include "processo.h"
+#include "config.h"    // Configurações de comunicação e Wi-Fi
+#include "processo.h"  // Declaração da estrutura do processo
 
 /*******************************************************************************************************************************/
 /***** DEFINICÕES **************************************************************************************************************/
 /*******************************************************************************************************************************/
-/***** Configurações de Comunicação *****/
-#define MQTT_BROKER "90d42cec75d14181b23673d72f964713.s1.eu.hivemq.cloud"
-#define MQTT_PORTA 8883              // Porta padrão para conexões MQTT seguras (TLS/SSL)
-#define MQTT_SENHA "espclient12345"  // Senha do usuário MQTT
-#define MQTT_USUARIO "espclient"     // Usuário MQTT
-#define WIFI_SENHA "#Ws120912"       // Senha da rede Wi-Fi
-#define WIFI_SSID "Willian"          // SSID da rede Wi-Fi
-
 /***** Entradas Analógicas *****/
 // Sensores de turbidez
 #define PIN_TBDZ_INICIAL 34  // Pino do sensor de turbidez da água inicial
@@ -175,7 +168,7 @@ float histerese = 0.3f;            // Histerese para verificação de ph
 float alvoPhCoagulante = 7.0f;     // Alvo de pH após dosagem do Coagulante
 float alvoPhAlcalinizante = 7.0f;  // Alvo de pH após dosagem do Alcalinizante
 float alvoPhSanitizante = 7.0f;    // Alvo de pH após dosagem do Sanitizante
-float alvoNtu = 5.0f;             // NTU alvo após coagulação
+float alvoNtu = 5.0f;              // NTU alvo após coagulação
 
 // Instancia do gerenciador MQTT para comunicação com o HiveMQ Cloud
 MqttManager mqtt = MqttManager(WIFI_SSID, WIFI_SENHA, MQTT_BROKER, MQTT_PORTA, MQTT_USUARIO, MQTT_SENHA);
