@@ -16,7 +16,7 @@
 #include "ShiftRegister.h"
 #include "Tanque.h"
 #include "TanqueTratamento.h"
-#include "config.h"    // Configurações de comunicação e Wi-Fi
+#include "configuracoes.h"    // Configurações de comunicação e Wi-Fi
 #include "processo.h"  // Declaração da estrutura do processo
 
 /*******************************************************************************************************************************/

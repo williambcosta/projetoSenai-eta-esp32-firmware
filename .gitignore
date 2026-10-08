@@ -4,4 +4,4 @@
 .vscode/launch.json
 .vscode/ipch
 logs/*
-src/config.h
+src/configuracoes.h
