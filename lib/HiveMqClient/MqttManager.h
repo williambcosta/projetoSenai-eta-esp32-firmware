@@ -18,6 +18,14 @@
 
 class MqttManager {
  private:
+  struct Alerta {          // Define a estrutura para armazenar mensagens de alerta
+    const int codigo;      // Código do alerta, usado para identificar o tipo de alerta
+    const int severidade;  // Severidade do alerta. Sendo 0-Baixa, 1-Média e 2-Alta
+    const char* mensagem;  // Mensagem do alerta, descrevendo o problema ou situação
+    bool ativo;            // Indica se o alerta está ativo ou não. Esse Mesmo alerta não será enviado novamente até que seja desativado e reativado, evitando mensagens duplicadas.
+    bool enviado;          // Indica se o alerta foi enviado.
+  };
+
   int mqtt_porta;  // Porta do servidor MQTT
 
   const char* wifi_ssid;      // SSID da rede Wi-Fi
@@ -33,15 +41,13 @@ class MqttManager {
   WiFiClientSecure espClient;  // Cliente seguro para comunicação MQTT
   PubSubClient client;         // Cliente MQTT
 
-  String msgAtual;        // Armazena a mensagem recebida do broker MQTT
-  String ultimaMsg = "";  // Armazena a última mensagem recebida.
+  char msgAtual[64];          // Armazena a mensagem recebida do broker MQTT
+  char ultimaMsg[64];         // Armazena a última mensagem recebida.
+  char bufferMsgAlerta[128];  // Buffer para armazenar a mensagem de alerta antes de enviá-la ao broker MQTT
+
+  Alerta alertas[26];  // Array para armazenar os alertas
 
   static MqttManager* _instance;  // Ponteiro estático para armazenar a instância atual da classe
-
-  char poolMsg[10][256];  // Buffer para armazenar mensagens curtas a serem publicadas
-  int inicio = 0;         // Onde a próxima mensagem será gravada
-  int fim = 0;            // De onde a próxima mensagem será lida/enviada
-  int totalMsgs = 0;      // Quantidade atual de mensagens acumuladas
 
   // Controle de reconexão não-bloqueante
   unsigned long ultimoIntervaloReconexao = 0;
@@ -63,12 +69,12 @@ class MqttManager {
   bool handle();                                                                                                                  // Função responsável por chamar o loop do cliente MQTT e manter a conexão ativa
   bool publish(uint8_t topico, const char* mensagem);                                                                             // Função para publicar mensagens em um tópico específico
   bool isConnected();                                                                                                             // Função para verificar se o cliente MQTT está conectado ao servidor
-  bool addMensagemAlerta(const char* mensagem);                                                                                    // Função para adicionar uma mensagem ao buffer de mensagens a serem publicadas
-  bool publicarProximaMensagemAlerta();                                                                                                   // Função para enviar a próxima mensagem do buffer de mensagens curtas
   bool publicarMensagensAlerta();                                                                                                 // Função para publicar todas as mensagens curtas armazenadas no buffer
 
-  String getMensagem() const { return msgAtual; };  // Retorna a última mensagem recebida
+  void getMensagem(char *buffer, size_t tamanho) const { snprintf(buffer, tamanho, msgAtual); };  // Retorna a última mensagem recebida
 
+  void ativarAlerta(int codigoAlerta);                                               // Função para ativar um alerta específico
+  void desativarAlerta(int codigoAlerta);                                            // Função para desativar um alerta específico
   void setTopicoTelemetria(const char* topico) { mqtt_topico_telemetria = topico; }  // Define o tópico para publicar os dados
   void setTopicoComandos(const char* topico) { mqtt_topico_comandos = topico; }      // Define o tópico para receber dados
   void setTopicoAlertas(const char* topico) { mqtt_topico_alertas = topico; }        // Define o tópico para receber alertas

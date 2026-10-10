@@ -3,7 +3,36 @@
 // Inicializa o ponteiro estático como nulo
 MqttManager* MqttManager::_instance = nullptr;
 
-MqttManager::MqttManager(const char* ssid, const char* wifiSenha, const char* servidor, int porta, const char* usuario, const char* usuarioSenha) {
+MqttManager::MqttManager(const char* ssid, const char* wifiSenha,
+                         const char* servidor, int porta,
+                         const char* usuario, const char* usuarioSenha)
+    : alertas{
+          {0, 0, "Alertas", false, false},
+          {1, 2, "Tanque de Armazenamento: Falha em chaves de nível", false, false},
+          {2, 2, "Tanque de Ativos: Falha em chaves de nível", false, false},
+          {3, 2, "Tanque Final: Falha em chaves de nível", false, false},
+          {4, 2, "Tanque de Eluentes: Falha em chaves de nível", false, false},
+          {5, 1, "Tanque de Ativos: pH abaixo de 4.0", false, false},
+          {6, 1, "Tanque de Ativos: pH acima de 8.0", false, false},
+          {7, 1, "Tanque de Final: pH abaixo de 4.0", false, false},
+          {8, 1, "Tanque de Final: pH acima de 8.0", false, false},
+          {9, 2, "Tanque de Final: Turbidez acima de 5 NTU", false, false},
+          {10, 0, "Tanque de Armazenamento: Temperatura abaixo dos 15 graus", false, false},
+          {11, 0, "Tanque de Armazenamento: Temperatura acima dos 35 graus", false, false},
+          {12, 0, "Tanque de Ativos: Temperatura abaixo dos 15 graus", false, false},
+          {13, 0, "Tanque de Ativos: Temperatura acima dos 35 graus", false, false},
+          {14, 0, "Tanque de Final: Temperatura abaixo dos 15 graus", false, false},
+          {15, 0, "Tanque de Final: Temperatura acima dos 35 graus", false, false},
+          {16, 1, "Impossível Ligar PM1: Tanque inicial em nível baixo", false, false},
+          {17, 1, "Impossível Ligar PM1: Tanque de ativos em nível alto", false, false},
+          {18, 1, "Impossível Ligar PM2: Nenhuma solenoide acionada", false, false},
+          {19, 1, "Impossível Ligar PM2: Ambas as solenoides estão acionadas", false, false},
+          {20, 1, "Impossível Ligar PM2: Tanque de efluentes em nível alto", false, false},
+          {21, 1, "Impossível Ligar PM2: Tanque final em nível alto", false, false},
+          {22, 1, "Impossível Ligar PM3: Tanque de armazenamento em nível alto", false, false},
+          {23, 1, "Impossível Ligar PM3: Tanque de efluentes em nível baixo", false, false},
+          {24, 1, "Impossível Ligar SV1: Solenoide SV2 ligada", false, false},
+          {25, 1, "Impossível Ligar SV2: Solenoide SV1 ligada", false, false}} {
   wifi_ssid = ssid;
   wifi_senha = wifiSenha;
   mqtt_servidor = servidor;
@@ -23,6 +52,7 @@ void MqttManager::setupWifi() {
   // Dispara a tentativa de conexão sem aguardar em loop bloqueante
   Serial.print("\nIniciando conexão Wi-Fi em ");
   Serial.println(wifi_ssid);
+  Serial.println("");
   WiFi.begin(wifi_ssid, wifi_senha);
 }
 
@@ -38,15 +68,18 @@ void MqttManager::reconnect() {
   if (!client.connected()) {                                                    // verifica se o cliente MQTT está conectado
     String clientId = "ESP32-ETA-" + String((uint32_t)ESP.getEfuseMac(), HEX);  // Cria um id único para o cliente MQTT baseado no MAC do ESP32
     Serial.print("Tentando conexão MQTT com HiveMQ...");
+    Serial.println("");
 
     if (client.connect(clientId.c_str(), mqtt_usuario, mqtt_senha)) {  // Tenta conectar ao broker MQTT com o id único e as credenciais fornecidas
       Serial.println("conectado!");
+      Serial.println("");
       if (mqtt_topico_comandos != nullptr) {     // Se o tópico de comandos foi definido
         client.subscribe(mqtt_topico_comandos);  // Assina o tópico de comandos para receber mensagens
       }
     } else {
       Serial.print("Falha: ");
       Serial.println(client.state());
+      Serial.println("");
     }
   }
 }
@@ -63,9 +96,6 @@ void MqttManager::begin(const char* topicoComandos, const char* topicoTelemetria
   client.setServer(mqtt_servidor, mqtt_porta);    // Configura o servidor
   client.setCallback(MqttManager::mqttCallback);  // Configura o callback responsável pelo recebimento das mensagens
   client.setBufferSize(1024);                     // Configura o tamanho do buffer para receber mensagens maiores
-
-  msgAtual.reserve(51);
-  ultimaMsg.reserve(51);
 }
 
 // Callback estático que será chamado pelo PubSubClient quando uma mensagem for recebida
@@ -77,17 +107,10 @@ void MqttManager::mqttCallback(char* topico, byte* mensagem, unsigned int tamanh
 
 // Função que processa a mensagem recebida
 void MqttManager::handleMsg(char* topico, byte* mensagem, unsigned int tamanho) {
-  static String msg = "";
-  msg.reserve(1024);  // Reserva espaço para a mensagem recebida
-  msg = "";           // Limpa a mensagem para receber a nova
+  snprintf(msgAtual, tamanho + 1, "%s", mensagem);  // Copia a mensagem recebida para o buffer de mensagem atual
 
-  // Transforma o array de bytes recebido em uma string para facilitar o processamento
-  for (int i = 0; i < tamanho; i++) {
-    msg += (char)mensagem[i];
-  }
-
-  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, msg.c_str());  // Loga a mensagem recebida no console
-  msgAtual = msg;                                                                              // Salva a última mensagem recebida para que possa ser acessada posteriormente
+  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, msgAtual);  // Loga a mensagem recebida no console
+  Serial.println("");
 }
 
 // Função que deve ser chamada no loop principal para manter a conexão
@@ -103,8 +126,8 @@ bool MqttManager::handle() {
     }
   }
 
-  if (msgAtual != ultimaMsg) {
-    ultimaMsg = msgAtual;
+  if (strcmp(msgAtual, ultimaMsg) != 0) {
+    strcpy(ultimaMsg, msgAtual);  // Atualiza a última mensagem recebida
     return true;
   } else {
     return false;
@@ -128,6 +151,7 @@ bool MqttManager::publish(uint8_t topico, const char* mensagem) {
     Serial.println(topicoSelecionado);
     Serial.print("Mensagem:");
     Serial.println(mensagem);
+    Serial.println("");
     return true;
   } else {  // Caso contrario sinaliza a falha retornando false
     return false;
@@ -139,41 +163,36 @@ bool MqttManager::isConnected() {
   return client.connected();  // Retorna o estado da conexão com o servidor MQTT
 }
 
-// Função para adicionar uma mensagem ao buffer de mensagens a serem publicadas
-bool MqttManager::addMensagemAlerta(const char* mensagem) {
-  if (totalMsgs >= 10) {
-    return false;  // Fila cheia
+// Função para ativar um alerta específico
+void MqttManager::ativarAlerta(int codigoAlerta) {
+  if (!alertas[codigoAlerta].ativo) {
+    alertas[codigoAlerta].ativo = true;  // Ativa o alerta correspondente ao código fornecido
   }
-
-  snprintf(poolMsg[inicio], 256, "%s", mensagem);  // Copia a mensagem para o buffer
-  inicio = (inicio + 1) % 10;                      // Avança o índice e volta ao 0 quando chega em 10
-  totalMsgs++;                                     // Incrementa o total de mensagens acumuladas
-
-  return true;
 }
 
-// Consome e envia a mensagem mais antiga
-bool MqttManager::publicarProximaMensagemAlerta() {
-  if (totalMsgs == 0) {
-    return false;  // Fila vazia
-  }
-
-  if (!publish(TOPICO_ALERTAS, poolMsg[fim])) {
-    return false;  // Caso o envio falhe retorna false
-  }
-
-  fim = (fim + 1) % 10;  // Avança a leitura
-  totalMsgs--;
-
-  return true;
+// Função para desativar um alerta específico
+void MqttManager::desativarAlerta(int codigoAlerta) {
+  Serial.println("mensagem\n");
+  alertas[codigoAlerta].ativo = false;    // Desativa o alerta correspondente ao código fornecido
+  alertas[codigoAlerta].enviado = false;  // Marca o alerta como não enviado
 }
 
 // Função para publicar todas as mensagens curtas armazenadas no buffer
 bool MqttManager::publicarMensagensAlerta() {
-  while (totalMsgs > 0) {
-    if (!publicarProximaMensagemAlerta()) {  // Caso o envio de alguma mensagem falhar retorna false
-      return false;
+  for (int i = 0; i < 26; i++) {
+    if (alertas[i].ativo && !alertas[i].enviado) {
+      // Formata a mensagem de alerta no buffer antes de enviá-la
+      snprintf(bufferMsgAlerta,
+               sizeof(bufferMsgAlerta),
+               "%d;%d;%s",
+               alertas[i].codigo,
+               alertas[i].severidade,
+               alertas[i].mensagem);
+      if (!publish(TOPICO_ALERTAS, bufferMsgAlerta)) {  // Tenta publicar a mensagem de alerta
+        return false;                                   // Caso o envio falhe retorna false
+      }
     }
+    alertas[i].enviado = true;  // Marca o alerta como enviado
   }
   return true;
 }

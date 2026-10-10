@@ -162,7 +162,7 @@ unsigned long dtHomogeneizacao = 0;        // Tempo percorrido de homogeneizaç�
 unsigned long dtCoagulacao = 0;            // Tempo percorrido de coagulação dos residuos do tanque de ativos
 unsigned long dtPausaDosagem = 0;          // Tempo percorrido de pausa de dosagem para homogeneização da água
 unsigned long dtUpdate = 0;                // Tempo percorrido de atualização da telemetria
-//unsigned long dt = 0;                      // Tempo de duração de uma interação inteira de loop
+// unsigned long dt = 0;                      // Tempo de duração de uma interação inteira de loop
 
 // Parâmetros das caracteristicas da água
 float histerese = 0.3f;            // Histerese para verificação de ph
@@ -176,6 +176,7 @@ MqttManager mqtt = MqttManager(WIFI_SSID, WIFI_SENHA, MQTT_BROKER, MQTT_PORTA, M
 
 JsonDocument telemetria;  // Objeto Json que será enviado ao broker mqtt com os dados do processo
 
+char mensagem[128];           //  Buffer para armazenar a mensagem recebida do broker MQTT
 char bufferTelemetria[1025];  // Buffer para armazenar a telemetria em formato JSON antes de enviar ao broker MQTT
 char dataHoraAtual[25];       // Buffer para armazenar a data e hora atual em formato de string, static garante que a variável permaneça na memória
 
@@ -246,6 +247,7 @@ void setup() {
   if (erro) {
     Serial.print("Falha ao processar JSON: ");
     Serial.println(erro.f_str());
+    Serial.println("");
   }
 
   delay(5000);  // Aguarda 5 segundos para garantir que o sistema esteja estável antes de sincronizar a hora com o servidor NTP
@@ -330,7 +332,7 @@ void atualizaTelemetria() {
 /***** LOOP PRINCIPAL **********************************************************************************************************/
 /*******************************************************************************************************************************/
 void loop() {
-  //dt = millis();
+  // dt = millis();
   /******************************************/
   /***** Tratamento de comandos *************/
   /******************************************/
@@ -338,16 +340,20 @@ void loop() {
   // Processa os comandos recebidos do broker MQTT
   // Verifica se existe alguma mensagem recebida do broker MQTT e processa a mensagem
   if (mqtt.handle()) {
+    mqtt.getMensagem(mensagem, 128);
+    //Serial.println(strcmp(mensagem, "alerta"));
     // Alterando o modo de operação de acordo com a mensagem recebida do broker MQTT
-    if (mqtt.getMensagem() == "MANUAL") {
+    if (strcmp(mensagem, "MANUAL") == 0) {
       Serial.println("Alterando para o modo manual");
       processo.modoOperacao = Processo::ModoOperacao::Manual;
-    } else if (mqtt.getMensagem() == "AUTOMATICO") {
+    } else if (strcmp(mensagem, "AUTOMATICO") == 0) {
       Serial.println("Alterando para o modo automático");
       processo.modoOperacao = Processo::ModoOperacao::Automatico;
-    } else if (mqtt.getMensagem() == "EMERGENCIA") {
+    } else if (strcmp(mensagem, "EMERGENCIA") == 0) {
       Serial.println("Alterando para o modo emergência");
       processo.modoOperacao = Processo::ModoOperacao::Emergencia;
+    } else if (strcmp(mensagem, "alerta") == 47) {
+      mqtt.desativarAlerta(atoi(strchr(mensagem, '/') + 1));
     }
 
     /**
@@ -358,21 +364,21 @@ void loop() {
       // TODO: Garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com SV2 ligado etapa vai ser esvaziando tanque Ativos.
       // Isso vai ser dificil de testar, provávelmente para o protótipo seja mais interessante continuar de onde estava antes do modo manual
 
-      if (mqtt.getMensagem() == "PM1") {                                                      // Caso comando PM1
-        if (tanqueArmazenamento.isAtuadorLigado(0)) {                                         // Se a bomba PM1 estiver ligada, indica que o comando é para desligar a bomba
-          tanqueArmazenamento.desligaAtuador(0);                                              // Desliga a bomba
-          processo.etapaAtual = Processo::Etapa::Inicial;                                     // Atualiza o controle do processo para voltar ao inicio caso o modo de operação volte a automatico
-        } else {                                                                              // Caso esteja desligada, indica que o comando é para ligar
-          if (tanqueArmazenamento.isNivelBaixo()) {                                           // Se tanque inicial em nível baixo
-            mqtt.addMensagemAlerta("Impossível Ligar PM1: Tanque inicial em nível baixo.");   // Envia alerta
-          } else if (tanqueAtivos.isNivelAlto()) {                                            // Caso Tanque de ativos em nível alto
-            mqtt.addMensagemAlerta("Impossível Ligar PM1: Tanque de ativos em nível alto.");  // Envia alerta
-          } else {                                                                            // Caso condições permitam
-            tanqueArmazenamento.ligaAtuador(0);                                               // Aciona bomba PM1
-            processo.etapaAtual = Processo::Etapa::EsvaziandoTqArmaz;                         // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
+      if (strcmp(mensagem, "PM1") == 0) {                              // Caso comando PM1
+        if (tanqueArmazenamento.isAtuadorLigado(0)) {                  // Se a bomba PM1 estiver ligada, indica que o comando é para desligar a bomba
+          tanqueArmazenamento.desligaAtuador(0);                       // Desliga a bomba
+          processo.etapaAtual = Processo::Etapa::Inicial;              // Atualiza o controle do processo para voltar ao inicio caso o modo de operação volte a automatico
+        } else {                                                       // Caso esteja desligada, indica que o comando é para ligar
+          if (tanqueArmazenamento.isNivelBaixo()) {                    // Se tanque inicial em nível baixo
+            mqtt.ativarAlerta(16);                                     // Envia alerta
+          } else if (tanqueAtivos.isNivelAlto()) {                     // Caso Tanque de ativos em nível alto
+            mqtt.ativarAlerta(17);                                     // Envia alerta
+          } else {                                                     // Caso condições permitam
+            tanqueArmazenamento.ligaAtuador(0);                        // Aciona bomba PM1
+            processo.etapaAtual = Processo::Etapa::EsvaziandoTqArmaz;  // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
           }
         }
-      } else if (mqtt.getMensagem() == "PM2") {                          // Caso comando PM2
+      } else if (strcmp(mensagem, "PM2") == 0) {                         // Caso comando PM2
         if (tanqueAtivos.isAtuadorLigado(0)) {                           // Verifica se a bomba está ligada, indicando que o comando é para desligar
           tanqueAtivos.desligaAtuador(0);                                // Desliga bomba PM2
           if (tanqueAtivos.isAtuadorLigado(5)) {                         // Se a solenoide SV1 estiver ligada, indicando que o processo está esvaziando o tanque de ativos para o tanque de efluentes
@@ -385,74 +391,74 @@ void loop() {
             processo.etapaAtual = Processo::Etapa::TratamentoUv;  // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
           }
 
-        } else {                                                                                   // Caso a bomba esteja desligada, indicando que é para ligar
-          if (!tanqueAtivos.isAtuadorLigado(5) && !tanqueAtivos.isAtuadorLigado(6)) {              // Se ambas solenoides estão desligadas, indicando que não há fluxo de água para nenhum dos tanques
-            mqtt.addMensagemAlerta("Impossível Ligar PM2: Nenhuma solenoide acionada.");           // Envia alerta
-          } else if (tanqueAtivos.isAtuadorLigado(5) && tanqueAtivos.isAtuadorLigado(6)) {         // Se ambas solenoides estão ligadas, indicando que há fluxo de água para ambos os tanques
-            mqtt.addMensagemAlerta("Impossível Ligar PM2: Ambas as solenoides estão acionadas.");  // Envia alerta
-          } else if (tanqueAtivos.isAtuadorLigado(5)) {                                            // Se solenoide SV1 esteja ligada, indica que o processo está esvaziando o tanque de ativos para o tanque de efluentes
-            if (tanqueEfluentes.isNivelAlto()) {                                                   // E tanque final esteja em nível alto
-              mqtt.addMensagemAlerta("Impossível Ligar PM2: Tanque de efluentes em nível alto.");  // Envia alerta
-            } else {                                                                               // Caso as condições permitam
-              tanqueAtivos.ligaAtuador(0);                                                         // Liga bomba PM2
-              processo.etapaAtual = Processo::Etapa::RemovendoSedimentos;                          // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
-            }
-          } else if (tanqueAtivos.isAtuadorLigado(6)) {                                     // Se solenoide SV2 esteja ligada, indica que o processo está esvaziando o tanque de ativos para o tanque final
-            if (tanqueFinal.isNivelAlto()) {                                                // Se tanque final esteja em nível alto
-              mqtt.addMensagemAlerta("Impossível Ligar PM2: Tanque final em nível alto.");  // Envia alerta
+        } else {                                                                            // Caso a bomba esteja desligada, indicando que é para ligar
+          if (!tanqueAtivos.isAtuadorLigado(5) && !tanqueAtivos.isAtuadorLigado(6)) {       // Se ambas solenoides estão desligadas, indicando que não há fluxo de água para nenhum dos tanques
+            mqtt.ativarAlerta(18);                                                          // Envia alerta
+          } else if (tanqueAtivos.isAtuadorLigado(5) && tanqueAtivos.isAtuadorLigado(6)) {  // Se ambas solenoides estão ligadas, indicando que há fluxo de água para ambos os tanques
+            mqtt.ativarAlerta(19);                                                          // Envia alerta
+          } else if (tanqueAtivos.isAtuadorLigado(5)) {                                     // Se solenoide SV1 esteja ligada, indica que o processo está esvaziando o tanque de ativos para o tanque de efluentes
+            if (tanqueEfluentes.isNivelAlto()) {                                            // E tanque final esteja em nível alto
+              mqtt.ativarAlerta(20);                                                        // Envia alerta
             } else {                                                                        // Caso as condições permitam
               tanqueAtivos.ligaAtuador(0);                                                  // Liga bomba PM2
-              processo.etapaAtual = Processo::Etapa::EsvaziandoTanqueAtivos;                // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
+              processo.etapaAtual = Processo::Etapa::RemovendoSedimentos;                   // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
+            }
+          } else if (tanqueAtivos.isAtuadorLigado(6)) {                       // Se solenoide SV2 esteja ligada, indica que o processo está esvaziando o tanque de ativos para o tanque final
+            if (tanqueFinal.isNivelAlto()) {                                  // Se tanque final esteja em nível alto
+              mqtt.ativarAlerta(21);                                          // Envia alerta
+            } else {                                                          // Caso as condições permitam
+              tanqueAtivos.ligaAtuador(0);                                    // Liga bomba PM2
+              processo.etapaAtual = Processo::Etapa::EsvaziandoTanqueAtivos;  // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
             }
           }
         }
-      } else if (mqtt.getMensagem() == "PM3") {                                                      // Caso comando PM3
-        if (tanqueEfluentes.isAtuadorLigado(0)) {                                                    // Se a bomba PM3 estiver ligada, indica que o comando é para desligar a bomba
-          tanqueEfluentes.desligaAtuador(0);                                                         // Desliga a bomba
-        } else {                                                                                     // Caso PM3 desligada
-          if (tanqueArmazenamento.isNivelAlto()) {                                                   // Caso Tanque de armazenamento em nível alto
-            mqtt.addMensagemAlerta("Impossível Ligar PM3: Tanque de armazenamento em nível alto.");  // Envia alerta
-          } else if (tanqueEfluentes.isNivelBaixo()) {                                               // Caso tanque de efluentes em nível baixo
-            mqtt.addMensagemAlerta("Impossível Ligar PM3: Tanque de efluentes em nível baixo.");     // Envia alerta
-          } else {                                                                                   // Caso condições permitam
-            tanqueEfluentes.ligaAtuador(0);                                                          // Liga PM3
+      } else if (strcmp(mensagem, "PM3") == 0) {        // Caso comando PM3
+        if (tanqueEfluentes.isAtuadorLigado(0)) {       // Se a bomba PM3 estiver ligada, indica que o comando é para desligar a bomba
+          tanqueEfluentes.desligaAtuador(0);            // Desliga a bomba
+        } else {                                        // Caso PM3 desligada
+          if (tanqueArmazenamento.isNivelAlto()) {      // Caso Tanque de armazenamento em nível alto
+            mqtt.ativarAlerta(22);                      // Envia alerta
+          } else if (tanqueEfluentes.isNivelBaixo()) {  // Caso tanque de efluentes em nível baixo
+            mqtt.ativarAlerta(23);                      // Envia alerta
+          } else {                                      // Caso condições permitam
+            tanqueEfluentes.ligaAtuador(0);             // Liga PM3
           }
         }
-      } else if (mqtt.getMensagem() == "SV1") {                                     // Caso comando SV1
-        if (tanqueAtivos.isAtuadorLigado(5)) {                                      // Se a solenoide SV1 estiver ligada, indica que o comando é para desligar a mesma
-          tanqueAtivos.desligaAtuador(5);                                           // Desliga a solenoide de controle de fluxo para o tanque de efluentes
-        } else {                                                                    // Caso contrario
-          if (tanqueAtivos.isAtuadorLigado(6)) {                                    // Se a solenoide SV2 estiver ligada
-            mqtt.addMensagemAlerta("Impossível Ligar SV1: Solenoide SV2 ligada.");  // Envia alerta
-          } else {                                                                  // Caso nenhuma solenoide esteja acionada
-            tanqueAtivos.ligaAtuador(5);                                            // Liga a solenoide de controle de fluxo para o tanque de efluentes
+      } else if (strcmp(mensagem, "SV1") == 0) {  // Caso comando SV1
+        if (tanqueAtivos.isAtuadorLigado(5)) {    // Se a solenoide SV1 estiver ligada, indica que o comando é para desligar a mesma
+          tanqueAtivos.desligaAtuador(5);         // Desliga a solenoide de controle de fluxo para o tanque de efluentes
+        } else {                                  // Caso contrario
+          if (tanqueAtivos.isAtuadorLigado(6)) {  // Se a solenoide SV2 estiver ligada
+            mqtt.ativarAlerta(24);                // Envia alerta
+          } else {                                // Caso nenhuma solenoide esteja acionada
+            tanqueAtivos.ligaAtuador(5);          // Liga a solenoide de controle de fluxo para o tanque de efluentes
           }
         }
-      } else if (mqtt.getMensagem() == "SV2") {                                     // Caso comando SV2
-        if (tanqueAtivos.isAtuadorLigado(6)) {                                      // Se a solenoide SV2 estiver ligada, indica que o comando é para desligar a mesma
-          tanqueAtivos.desligaAtuador(6);                                           // Desliga a solenoide de controle de fluxo para o tanque final
-        } else {                                                                    // Caso contrario
-          if (tanqueAtivos.isAtuadorLigado(5)) {                                    // Se a solenoide SV1 estiver ligada
-            mqtt.addMensagemAlerta("Impossível Ligar SV2: Solenoide SV1 ligada.");  // Envia alerta
-          } else {                                                                  // Caso nenhuma solenoide esteja acionada
-            tanqueAtivos.ligaAtuador(6);                                            // Liga a solenoide de controle de fluxo para o tanque final
+      } else if (strcmp(mensagem, "SV2") == 0) {  // Caso comando SV2
+        if (tanqueAtivos.isAtuadorLigado(6)) {    // Se a solenoide SV2 estiver ligada, indica que o comando é para desligar a mesma
+          tanqueAtivos.desligaAtuador(6);         // Desliga a solenoide de controle de fluxo para o tanque final
+        } else {                                  // Caso contrario
+          if (tanqueAtivos.isAtuadorLigado(5)) {  // Se a solenoide SV1 estiver ligada
+            mqtt.ativarAlerta(25);                // Envia alerta
+          } else {                                // Caso nenhuma solenoide esteja acionada
+            tanqueAtivos.ligaAtuador(6);          // Liga a solenoide de controle de fluxo para o tanque final
           }
         }
-      } else if (mqtt.getMensagem() == "RM1") {  // Caso comando RM1
-        tanqueAtivos.comutaAtuador(1);           // Comuta o estado do misturador do tanque de ativos
-      } else if (mqtt.getMensagem() == "RM2") {  // Caso comando RM2
-        tanqueFinal.comutaAtuador(0);            // Comuta o estado do misturador do tanque de ativos
-      } else if (mqtt.getMensagem() == "DM1") {  // Caso comando DM1
-        tanqueAtivos.comutaAtuador(2);           // Comuta o estado do dosador de coagulante
+      } else if (strcmp(mensagem, "RM1") == 0) {  // Caso comando RM1
+        tanqueAtivos.comutaAtuador(1);            // Comuta o estado do misturador do tanque de ativos
+      } else if (strcmp(mensagem, "RM2") == 0) {  // Caso comando RM2
+        tanqueFinal.comutaAtuador(0);             // Comuta o estado do misturador do tanque de ativos
+      } else if (strcmp(mensagem, "DM1") == 0) {  // Caso comando DM1
+        tanqueAtivos.comutaAtuador(2);            // Comuta o estado do dosador de coagulante
         processo.etapaAtual = Processo::Etapa::VerificandoPh;
-      } else if (mqtt.getMensagem() == "DM2") {  // Caso comando DM2
-        tanqueAtivos.comutaAtuador(3);           // Comuta o estado do dosador de alcalinizante
+      } else if (strcmp(mensagem, "DM2") == 0) {  // Caso comando DM2
+        tanqueAtivos.comutaAtuador(3);            // Comuta o estado do dosador de alcalinizante
         processo.etapaAtual = Processo::Etapa::VerificandoPh;
-      } else if (mqtt.getMensagem() == "DM3") {  // Caso comando DM3
-        tanqueAtivos.comutaAtuador(4);           // Comuta o estado do dosador de sanitizante
+      } else if (strcmp(mensagem, "DM3") == 0) {  // Caso comando DM3
+        tanqueAtivos.comutaAtuador(4);            // Comuta o estado do dosador de sanitizante
         processo.etapaAtual = Processo::Etapa::VerificandoPh;
-      } else if (mqtt.getMensagem() == "H1") {  // Caso comando H1
-        tanqueFinal.comutaAtuador(1);           // Comuta o estado da luz UV do tanque final
+      } else if (strcmp(mensagem, "H1") == 0) {  // Caso comando H1
+        tanqueFinal.comutaAtuador(1);            // Comuta o estado da luz UV do tanque final
       }
     }
   }
@@ -463,68 +469,69 @@ void loop() {
 
   // Envia as informações do processo para o broker MQTT
   if (((millis() - dtUpdate) >= tempoUpdate) && mqtt.isConnected()) {
+    // TODO: Alterar lógica dos alertas para enviar apénas o código do alerta. Desconsiderar o envio caso o alerta esteja em aberto
     /******************************************/
     /***** Alertas ****************************/
     /******************************************/
     // Chaves de nível //
     if (tanqueArmazenamento.isFalhaSensores()) {
-      mqtt.addMensagemAlerta("Tanque de Armazenamento: Falha em chaves de nível");
+      mqtt.ativarAlerta(1);
     }
     if (tanqueAtivos.isFalhaSensores()) {
-      mqtt.addMensagemAlerta("Tanque de Ativos: Falha em chaves de nível");
+      mqtt.ativarAlerta(2);
     }
     if (tanqueFinal.isFalhaSensores()) {
-      mqtt.addMensagemAlerta("Tanque Final: Falha em chaves de nível");
+      mqtt.ativarAlerta(3);
     }
     if (tanqueEfluentes.isFalhaSensores()) {
-      mqtt.addMensagemAlerta("Tanque de Eluentes: Falha em chaves de nível");
+      mqtt.ativarAlerta(4);
     }
 
     // pH //
     float tempFloat = tanqueAtivos.getPH();
     if (tempFloat <= 4.0f) {
-      mqtt.addMensagemAlerta("Tanque de Ativos: pH abaixo de 4.0 ");
+      mqtt.ativarAlerta(5);
     }
     if (tempFloat >= 8.0f) {
-      mqtt.addMensagemAlerta("Tanque de Ativos: pH acima de 8.0 ");
+      mqtt.ativarAlerta(6);
     }
 
     tempFloat = tanqueFinal.getPH();
     if (tempFloat <= 4.0f) {
-      mqtt.addMensagemAlerta("Tanque de Final: pH abaixo de 4.0 ");
+      mqtt.ativarAlerta(7);
     }
     if (tempFloat >= 8.0f) {
-      mqtt.addMensagemAlerta("Tanque de Final: pH acima de 8.0 ");
+      mqtt.ativarAlerta(8);
     }
 
     // Turbidez //
     if (tanqueFinal.getTurbidez() >= 5.0f) {
-      mqtt.addMensagemAlerta("Tanque de Final: Turbidez acima de 5 NTU ");
+      mqtt.ativarAlerta(9);
     }
 
     // Temperatura //
     tempFloat = tempArmaz.getTemperatura();
     if (tempArmaz.getTemperatura() <= 15.0f) {
-      mqtt.addMensagemAlerta("Tanque de Armazenamento: Temperatura abaixo dos 15 graus ");
+      mqtt.ativarAlerta(10);
     }
     if (tempFloat >= 35.0f) {
-      mqtt.addMensagemAlerta("Tanque de Armazenamento: Temperatura acima dos 35 graus ");
+      mqtt.ativarAlerta(11);
     }
 
     tempFloat = tanqueAtivos.getTemperatura();
     if (tempFloat <= 15.0f) {
-      mqtt.addMensagemAlerta("Tanque de Ativos: Temperatura abaixo dos 15 graus ");
+      mqtt.ativarAlerta(12);
     }
     if (tempFloat >= 35.0f) {
-      mqtt.addMensagemAlerta("Tanque de Ativos: Temperatura acima dos 35 graus ");
+      mqtt.ativarAlerta(13);
     }
 
     tempFloat = tanqueFinal.getTemperatura();
     if (tempFloat <= 15.0f) {
-      mqtt.addMensagemAlerta("Tanque de Final: Temperatura abaixo dos 15 graus ");
+      mqtt.ativarAlerta(14);
     }
     if (tempFloat >= 35.0f) {
-      mqtt.addMensagemAlerta("Tanque de Final: Temperatura acima dos 35 graus ");
+      mqtt.ativarAlerta(15);
     }
 
     atualizaTelemetria();                               // Atualiza os dados do processo no objeto JSON e no buffer para envio
@@ -866,4 +873,5 @@ void loop() {
   // Serial.print("Tempo total dentro de loop(): ");
   // Serial.print(millis() - dt);
   // Serial.println("ms");
+  //Serial.println("");
 }
