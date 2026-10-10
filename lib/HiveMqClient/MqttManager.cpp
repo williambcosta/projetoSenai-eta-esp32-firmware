@@ -35,14 +35,14 @@ void MqttManager::reconnect() {
   }
 
   // Se Wi-Fi está OK, tenta conectar ao MQTT Broker
-  if (!client.connected()) {
-    String clientId = "ESP32-ETA-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+  if (!client.connected()) {                                                    // verifica se o cliente MQTT está conectado
+    String clientId = "ESP32-ETA-" + String((uint32_t)ESP.getEfuseMac(), HEX);  // Cria um id único para o cliente MQTT baseado no MAC do ESP32
     Serial.print("Tentando conexão MQTT com HiveMQ...");
 
-    if (client.connect(clientId.c_str(), mqtt_usuario, mqtt_senha)) {
+    if (client.connect(clientId.c_str(), mqtt_usuario, mqtt_senha)) {  // Tenta conectar ao broker MQTT com o id único e as credenciais fornecidas
       Serial.println("conectado!");
-      if (mqtt_topico_comandos != nullptr) {
-        client.subscribe(mqtt_topico_comandos);
+      if (mqtt_topico_comandos != nullptr) {     // Se o tópico de comandos foi definido
+        client.subscribe(mqtt_topico_comandos);  // Assina o tópico de comandos para receber mensagens
       }
     } else {
       Serial.print("Falha: ");
@@ -64,6 +64,7 @@ void MqttManager::begin(const char* topicoComandos, const char* topicoTelemetria
   client.setCallback(MqttManager::mqttCallback);  // Configura o callback responsável pelo recebimento das mensagens
   client.setBufferSize(1024);                     // Configura o tamanho do buffer para receber mensagens maiores
 
+  msgAtual.reserve(51);
   ultimaMsg.reserve(51);
 }
 
@@ -79,16 +80,18 @@ void MqttManager::handleMsg(char* topico, byte* mensagem, unsigned int tamanho) 
   static String msg = "";
   msg.reserve(1024);  // Reserva espaço para a mensagem recebida
   msg = "";           // Limpa a mensagem para receber a nova
+
+  // Transforma o array de bytes recebido em uma string para facilitar o processamento
   for (int i = 0; i < tamanho; i++) {
     msg += (char)mensagem[i];
   }
 
-  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, msg.c_str());
-  ultimaMsg = msg;
+  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, msg.c_str());  // Loga a mensagem recebida no console
+  msgAtual = msg;                                                                              // Salva a última mensagem recebida para que possa ser acessada posteriormente
 }
 
 // Função que deve ser chamada no loop principal para manter a conexão
-void MqttManager::handle() {
+bool MqttManager::handle() {
   if (client.connected()) {
     client.loop();
   } else {
@@ -98,6 +101,13 @@ void MqttManager::handle() {
       ultimoIntervaloReconexao = agora;
       reconnect();
     }
+  }
+
+  if (msgAtual != ultimaMsg) {
+    ultimaMsg = msgAtual;
+    return true;
+  } else {
+    return false;
   }
 }
 
@@ -127,4 +137,43 @@ bool MqttManager::publish(uint8_t topico, const char* mensagem) {
 // Função para verificar se o cliente MQTT está conectado ao servidor
 bool MqttManager::isConnected() {
   return client.connected();  // Retorna o estado da conexão com o servidor MQTT
+}
+
+// Função para adicionar uma mensagem ao buffer de mensagens a serem publicadas
+bool MqttManager::addMensagemAlerta(const char* mensagem) {
+  if (totalMsgs >= 10) {
+    return false;  // Fila cheia
+  }
+
+  snprintf(poolMsg[inicio], 256, "%s", mensagem);  // Copia a mensagem para o buffer
+  inicio = (inicio + 1) % 10;                      // Avança o índice e volta ao 0 quando chega em 10
+  totalMsgs++;                                     // Incrementa o total de mensagens acumuladas
+
+  return true;
+}
+
+// Consome e envia a mensagem mais antiga
+bool MqttManager::publicarProximaMensagemAlerta() {
+  if (totalMsgs == 0) {
+    return false;  // Fila vazia
+  }
+
+  if (!publish(TOPICO_ALERTAS, poolMsg[fim])) {
+    return false;  // Caso o envio falhe retorna false
+  }
+
+  fim = (fim + 1) % 10;  // Avança a leitura
+  totalMsgs--;
+
+  return true;
+}
+
+// Função para publicar todas as mensagens curtas armazenadas no buffer
+bool MqttManager::publicarMensagensAlerta() {
+  while (totalMsgs > 0) {
+    if (!publicarProximaMensagemAlerta()) {  // Caso o envio de alguma mensagem falhar retorna false
+      return false;
+    }
+  }
+  return true;
 }

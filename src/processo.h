@@ -3,7 +3,6 @@ struct Processo {
   enum class ModoOperacao {
     Automatico,  // Modo automático
     Manual,      // Modo manual de operação, Bombas continuam a ser desacionadas dependendo do nível dos tanques para evitar transbordo
-    Parada,      // Finaliza a etapa atual e para o processo
     Emergencia   // Para todos os atuadores e reínicia todos os parâmetros
   };
 
@@ -12,8 +11,6 @@ struct Processo {
     switch (modo) {
       case ModoOperacao::Manual:
         return "Manual";
-      case ModoOperacao::Parada:
-        return "Parada";
       case ModoOperacao::Emergencia:
         return "Emergencia";
       default:
@@ -86,5 +83,4 @@ struct Processo {
 
   Etapa etapaAtual = Etapa::Inicial;     // Variável para armazenar a etapa atual do processo
   Etapa controleEtapa = etapaAtual;      // Variável para armazenar a etapa anterior do processo
-  Etapa controleParada = controleEtapa;  // Variável utilizada para garantir que a etapa atual do processo finalize caso uma parada seja acionada
 };

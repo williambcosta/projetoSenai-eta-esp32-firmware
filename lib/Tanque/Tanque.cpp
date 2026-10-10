@@ -48,6 +48,16 @@ bool Tanque::isFalhaSensores() {
   return false;
 }
 
+// Função que retorna o estado do sensor de nível alto
+bool Tanque::getEstadoNivelAlto() {
+  return digitalRead(this->pinoNivelAlto) == HIGH;
+}
+
+// Função que retorna o estado do sensor de nível baixo
+bool Tanque::getEstadoNivelBaixo() {
+  return digitalRead(this->pinoNivelBaixo) == HIGH;
+}
+
 /**
  * Função responsável por indicar o estado do atuador indicado.
  *
@@ -77,6 +87,15 @@ void Tanque::ligaAtuador(uint8_t indiceAtuador) {
 void Tanque::desligaAtuador(uint8_t indiceAtuador) {
   if (isAtuadorLigado(indiceAtuador)) {
     atuadores[indiceAtuador].desliga();
+  }
+}
+
+// Comuta o estado do atuador indicado. Caso o mesmo esteja ligado, desliga. Caso esteja desligado, liga.
+void Tanque::comutaAtuador(uint8_t indiceAtuador) {
+  if (isAtuadorLigado(indiceAtuador)) {
+    desligaAtuador(indiceAtuador);
+  } else {
+    ligaAtuador(indiceAtuador);
   }
 }
 
