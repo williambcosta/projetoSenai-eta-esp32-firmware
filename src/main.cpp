@@ -114,8 +114,8 @@ std::vector<SaidaDigital> saidasAtivos = {
     SaidaDigital(PIN_DOSADOR_FeCl3_DM1),  // 2 - Coagulante
     SaidaDigital(PIN_DOSADOR_CaCO3_DM2),  // 3 - Alcalinizante
     SaidaDigital(PIN_DOSADOR_NaClO_DM3),  // 4 - Sanitizante
-    SaidaDigital(PIN_SOL_EFLU_SV1),      // 5 - Solenoide de controle de fluxo para efluentes
-    SaidaDigital(PIN_SOL_FINAL_SV2)      // 6 - Solenoide de controle de fluxo para tanque final
+    SaidaDigital(PIN_SOL_EFLU_SV1),       // 5 - Solenoide de controle de fluxo para efluentes
+    SaidaDigital(PIN_SOL_FINAL_SV2)       // 6 - Solenoide de controle de fluxo para tanque final
 };
 
 // Instancia
@@ -162,6 +162,7 @@ unsigned long dtHomogeneizacao = 0;        // Tempo percorrido de homogeneizaç�
 unsigned long dtCoagulacao = 0;            // Tempo percorrido de coagulação dos residuos do tanque de ativos
 unsigned long dtPausaDosagem = 0;          // Tempo percorrido de pausa de dosagem para homogeneização da água
 unsigned long dtUpdate = 0;                // Tempo percorrido de atualização da telemetria
+//unsigned long dt = 0;                      // Tempo de duração de uma interação inteira de loop
 
 // Parâmetros das caracteristicas da água
 float histerese = 0.3f;            // Histerese para verificação de ph
@@ -329,6 +330,7 @@ void atualizaTelemetria() {
 /***** LOOP PRINCIPAL **********************************************************************************************************/
 /*******************************************************************************************************************************/
 void loop() {
+  //dt = millis();
   /******************************************/
   /***** Tratamento de comandos *************/
   /******************************************/
@@ -353,7 +355,8 @@ void loop() {
      * O modo de Manual vai apenas interpretar os comandos enviádos pelo supervisório
      */
     if (processo.modoOperacao == Processo::ModoOperacao::Manual) {
-      // TODO: Garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com SV2 ligado etapa vai ser esvaziando tanque Ativos
+      // TODO: Garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com SV2 ligado etapa vai ser esvaziando tanque Ativos.
+      // Isso vai ser dificil de testar, provávelmente para o protótipo seja mais interessante continuar de onde estava antes do modo manual
 
       if (mqtt.getMensagem() == "PM1") {                                                      // Caso comando PM1
         if (tanqueArmazenamento.isAtuadorLigado(0)) {                                         // Se a bomba PM1 estiver ligada, indica que o comando é para desligar a bomba
@@ -369,11 +372,18 @@ void loop() {
             processo.etapaAtual = Processo::Etapa::EsvaziandoTqArmaz;                         // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
           }
         }
-      } else if (mqtt.getMensagem() == "PM2") {  // Caso comando PM2
-        if (tanqueAtivos.isAtuadorLigado(0)) {   // Verifica se a bomba está ligada, indicando que o comando é para desligar
-          tanqueAtivos.desligaAtuador(0);        // Desliga bomba PM2
-          tanqueAtivos.desligaAtuador(5);        // Desliga solenoide SV1
-          tanqueAtivos.desligaAtuador(6);        // Desliga solenoide SV2
+      } else if (mqtt.getMensagem() == "PM2") {                          // Caso comando PM2
+        if (tanqueAtivos.isAtuadorLigado(0)) {                           // Verifica se a bomba está ligada, indicando que o comando é para desligar
+          tanqueAtivos.desligaAtuador(0);                                // Desliga bomba PM2
+          if (tanqueAtivos.isAtuadorLigado(5)) {                         // Se a solenoide SV1 estiver ligada, indicando que o processo está esvaziando o tanque de ativos para o tanque de efluentes
+            tanqueAtivos.desligaAtuador(5);                              // Desliga solenoide SV1
+            processo.etapaAtual = Processo::Etapa::RemovendoSedimentos;  // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
+          }
+
+          if (tanqueAtivos.isAtuadorLigado(6)) {                  // Se a solenoide SV2 estiver ligada, indicando que o processo está esvaziando o tanque de ativos para o tanque final
+            tanqueAtivos.desligaAtuador(6);                       // Desliga solenoide SV2
+            processo.etapaAtual = Processo::Etapa::TratamentoUv;  // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
+          }
 
         } else {                                                                                   // Caso a bomba esteja desligada, indicando que é para ligar
           if (!tanqueAtivos.isAtuadorLigado(5) && !tanqueAtivos.isAtuadorLigado(6)) {              // Se ambas solenoides estão desligadas, indicando que não há fluxo de água para nenhum dos tanques
@@ -385,67 +395,67 @@ void loop() {
               mqtt.addMensagemAlerta("Impossível Ligar PM2: Tanque de efluentes em nível alto.");  // Envia alerta
             } else {                                                                               // Caso as condições permitam
               tanqueAtivos.ligaAtuador(0);                                                         // Liga bomba PM2
-              processo.etapaAtual = Processo::Etapa::EsvaziandoTanqueAtivos;                       // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
+              processo.etapaAtual = Processo::Etapa::RemovendoSedimentos;                          // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
             }
           } else if (tanqueAtivos.isAtuadorLigado(6)) {                                     // Se solenoide SV2 esteja ligada, indica que o processo está esvaziando o tanque de ativos para o tanque final
             if (tanqueFinal.isNivelAlto()) {                                                // Se tanque final esteja em nível alto
               mqtt.addMensagemAlerta("Impossível Ligar PM2: Tanque final em nível alto.");  // Envia alerta
             } else {                                                                        // Caso as condições permitam
               tanqueAtivos.ligaAtuador(0);                                                  // Liga bomba PM2
-              processo.etapaAtual = Processo::Etapa::EsvaziandoTanqueAtivos;                       // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
+              processo.etapaAtual = Processo::Etapa::EsvaziandoTanqueAtivos;                // Atualiza o controle da etapa para que o processo retorne de onde parou caso o modo de operação volte a automático
             }
           }
         }
-      }
-    } else if (mqtt.getMensagem() == "PM3") {                                                      // Caso comando PM3
-      if (tanqueEfluentes.isAtuadorLigado(0)) {                                                    // Se a bomba PM3 estiver ligada, indica que o comando é para desligar a bomba
-        tanqueEfluentes.desligaAtuador(0);                                                         // Desliga a bomba
-      } else {                                                                                     // Caso PM3 desligada
-        if (tanqueArmazenamento.isNivelAlto()) {                                                   // Caso Tanque de armazenamento em nível alto
-          mqtt.addMensagemAlerta("Impossível Ligar PM3: Tanque de armazenamento em nível alto.");  // Envia alerta
-        } else if (tanqueEfluentes.isNivelBaixo()) {                                               // Caso tanque de efluentes em nível baixo
-          mqtt.addMensagemAlerta("Impossível Ligar PM3: Tanque de efluentes em nível baixo.");     // Envia alerta
-        } else {                                                                                   // Caso condições permitam
-          tanqueEfluentes.ligaAtuador(0);                                                          // Liga PM3
+      } else if (mqtt.getMensagem() == "PM3") {                                                      // Caso comando PM3
+        if (tanqueEfluentes.isAtuadorLigado(0)) {                                                    // Se a bomba PM3 estiver ligada, indica que o comando é para desligar a bomba
+          tanqueEfluentes.desligaAtuador(0);                                                         // Desliga a bomba
+        } else {                                                                                     // Caso PM3 desligada
+          if (tanqueArmazenamento.isNivelAlto()) {                                                   // Caso Tanque de armazenamento em nível alto
+            mqtt.addMensagemAlerta("Impossível Ligar PM3: Tanque de armazenamento em nível alto.");  // Envia alerta
+          } else if (tanqueEfluentes.isNivelBaixo()) {                                               // Caso tanque de efluentes em nível baixo
+            mqtt.addMensagemAlerta("Impossível Ligar PM3: Tanque de efluentes em nível baixo.");     // Envia alerta
+          } else {                                                                                   // Caso condições permitam
+            tanqueEfluentes.ligaAtuador(0);                                                          // Liga PM3
+          }
         }
-      }
-    } else if (mqtt.getMensagem() == "SV1") {                                      // Caso comando SV1
-      if (tanqueAtivos.isAtuadorLigado(5)) {                                        // Se a solenoide SV1 estiver ligada, indica que o comando é para desligar a mesma
-        tanqueAtivos.desligaAtuador(5);                                             // Desliga a solenoide de controle de fluxo para o tanque de efluentes
-      } else {                                                                      // Caso contrario
-        if (tanqueAtivos.isAtuadorLigado(6)) {                                      // Se a solenoide SV2 estiver ligada
-          mqtt.addMensagemAlerta("Impossível Ligar SV1: Solenoide SV2 ligada.");  // Envia alerta
-        } else {                                                                    // Caso nenhuma solenoide esteja acionada
-          tanqueAtivos.ligaAtuador(5);                                              // Liga a solenoide de controle de fluxo para o tanque de efluentes
+      } else if (mqtt.getMensagem() == "SV1") {                                     // Caso comando SV1
+        if (tanqueAtivos.isAtuadorLigado(5)) {                                      // Se a solenoide SV1 estiver ligada, indica que o comando é para desligar a mesma
+          tanqueAtivos.desligaAtuador(5);                                           // Desliga a solenoide de controle de fluxo para o tanque de efluentes
+        } else {                                                                    // Caso contrario
+          if (tanqueAtivos.isAtuadorLigado(6)) {                                    // Se a solenoide SV2 estiver ligada
+            mqtt.addMensagemAlerta("Impossível Ligar SV1: Solenoide SV2 ligada.");  // Envia alerta
+          } else {                                                                  // Caso nenhuma solenoide esteja acionada
+            tanqueAtivos.ligaAtuador(5);                                            // Liga a solenoide de controle de fluxo para o tanque de efluentes
+          }
         }
-      }
-    } else if (mqtt.getMensagem() == "SV2") {                                      // Caso comando SV2
-      if (tanqueAtivos.isAtuadorLigado(6)) {                                        // Se a solenoide SV2 estiver ligada, indica que o comando é para desligar a mesma
-        tanqueAtivos.desligaAtuador(6);                                             // Desliga a solenoide de controle de fluxo para o tanque final
-      } else {                                                                      // Caso contrario
-        if (tanqueAtivos.isAtuadorLigado(5)) {                                      // Se a solenoide SV1 estiver ligada
-          mqtt.addMensagemAlerta("Impossível Ligar SV2: Solenoide SV1 ligada.");  // Envia alerta
-        } else {                                                                    // Caso nenhuma solenoide esteja acionada
-          tanqueAtivos.ligaAtuador(6);                                              // Liga a solenoide de controle de fluxo para o tanque final
+      } else if (mqtt.getMensagem() == "SV2") {                                     // Caso comando SV2
+        if (tanqueAtivos.isAtuadorLigado(6)) {                                      // Se a solenoide SV2 estiver ligada, indica que o comando é para desligar a mesma
+          tanqueAtivos.desligaAtuador(6);                                           // Desliga a solenoide de controle de fluxo para o tanque final
+        } else {                                                                    // Caso contrario
+          if (tanqueAtivos.isAtuadorLigado(5)) {                                    // Se a solenoide SV1 estiver ligada
+            mqtt.addMensagemAlerta("Impossível Ligar SV2: Solenoide SV1 ligada.");  // Envia alerta
+          } else {                                                                  // Caso nenhuma solenoide esteja acionada
+            tanqueAtivos.ligaAtuador(6);                                            // Liga a solenoide de controle de fluxo para o tanque final
+          }
         }
+      } else if (mqtt.getMensagem() == "RM1") {  // Caso comando RM1
+        tanqueAtivos.comutaAtuador(1);           // Comuta o estado do misturador do tanque de ativos
+      } else if (mqtt.getMensagem() == "RM2") {  // Caso comando RM2
+        tanqueFinal.comutaAtuador(0);            // Comuta o estado do misturador do tanque de ativos
+      } else if (mqtt.getMensagem() == "DM1") {  // Caso comando DM1
+        tanqueAtivos.comutaAtuador(2);           // Comuta o estado do dosador de coagulante
+        processo.etapaAtual = Processo::Etapa::VerificandoPh;
+      } else if (mqtt.getMensagem() == "DM2") {  // Caso comando DM2
+        tanqueAtivos.comutaAtuador(3);           // Comuta o estado do dosador de alcalinizante
+        processo.etapaAtual = Processo::Etapa::VerificandoPh;
+      } else if (mqtt.getMensagem() == "DM3") {  // Caso comando DM3
+        tanqueAtivos.comutaAtuador(4);           // Comuta o estado do dosador de sanitizante
+        processo.etapaAtual = Processo::Etapa::VerificandoPh;
+      } else if (mqtt.getMensagem() == "H1") {  // Caso comando H1
+        tanqueFinal.comutaAtuador(1);           // Comuta o estado da luz UV do tanque final
       }
-    } else if (mqtt.getMensagem() == "RM1") {  // Caso comando RM1
-      tanqueAtivos.comutaAtuador(1);           // Comuta o estado do misturador do tanque de ativos
-    } else if (mqtt.getMensagem() == "RM2") {  // Caso comando RM2
-      tanqueFinal.comutaAtuador(0);            // Comuta o estado do misturador do tanque de ativos
-    } else if (mqtt.getMensagem() == "DM1") {  // Caso comando DM1
-      tanqueAtivos.comutaAtuador(2);           // Comuta o estado do dosador de coagulante
-    } else if (mqtt.getMensagem() == "DM2") {  // Caso comando DM2
-      tanqueAtivos.comutaAtuador(3);           // Comuta o estado do dosador de alcalinizante
-    } else if (mqtt.getMensagem() == "DM3") {  // Caso comando DM3
-      tanqueAtivos.comutaAtuador(4);           // Comuta o estado do dosador de sanitizante
-    } else if (mqtt.getMensagem() == "H1") {   // Caso comando H1
-      tanqueFinal.comutaAtuador(1);            // Comuta o estado da luz UV do tanque final
     }
   }
-
-  // TODO: Implementar alertas
-  // se alerta mqtt.addMensagemAlerta("ALERTA");
 
   /******************************************/
   /***** Envio de mensagens *****************/
@@ -453,6 +463,70 @@ void loop() {
 
   // Envia as informações do processo para o broker MQTT
   if (((millis() - dtUpdate) >= tempoUpdate) && mqtt.isConnected()) {
+    /******************************************/
+    /***** Alertas ****************************/
+    /******************************************/
+    // Chaves de nível //
+    if (tanqueArmazenamento.isFalhaSensores()) {
+      mqtt.addMensagemAlerta("Tanque de Armazenamento: Falha em chaves de nível");
+    }
+    if (tanqueAtivos.isFalhaSensores()) {
+      mqtt.addMensagemAlerta("Tanque de Ativos: Falha em chaves de nível");
+    }
+    if (tanqueFinal.isFalhaSensores()) {
+      mqtt.addMensagemAlerta("Tanque Final: Falha em chaves de nível");
+    }
+    if (tanqueEfluentes.isFalhaSensores()) {
+      mqtt.addMensagemAlerta("Tanque de Eluentes: Falha em chaves de nível");
+    }
+
+    // pH //
+    float tempFloat = tanqueAtivos.getPH();
+    if (tempFloat <= 4.0f) {
+      mqtt.addMensagemAlerta("Tanque de Ativos: pH abaixo de 4.0 ");
+    }
+    if (tempFloat >= 8.0f) {
+      mqtt.addMensagemAlerta("Tanque de Ativos: pH acima de 8.0 ");
+    }
+
+    tempFloat = tanqueFinal.getPH();
+    if (tempFloat <= 4.0f) {
+      mqtt.addMensagemAlerta("Tanque de Final: pH abaixo de 4.0 ");
+    }
+    if (tempFloat >= 8.0f) {
+      mqtt.addMensagemAlerta("Tanque de Final: pH acima de 8.0 ");
+    }
+
+    // Turbidez //
+    if (tanqueFinal.getTurbidez() >= 5.0f) {
+      mqtt.addMensagemAlerta("Tanque de Final: Turbidez acima de 5 NTU ");
+    }
+
+    // Temperatura //
+    tempFloat = tempArmaz.getTemperatura();
+    if (tempArmaz.getTemperatura() <= 15.0f) {
+      mqtt.addMensagemAlerta("Tanque de Armazenamento: Temperatura abaixo dos 15 graus ");
+    }
+    if (tempFloat >= 35.0f) {
+      mqtt.addMensagemAlerta("Tanque de Armazenamento: Temperatura acima dos 35 graus ");
+    }
+
+    tempFloat = tanqueAtivos.getTemperatura();
+    if (tempFloat <= 15.0f) {
+      mqtt.addMensagemAlerta("Tanque de Ativos: Temperatura abaixo dos 15 graus ");
+    }
+    if (tempFloat >= 35.0f) {
+      mqtt.addMensagemAlerta("Tanque de Ativos: Temperatura acima dos 35 graus ");
+    }
+
+    tempFloat = tanqueFinal.getTemperatura();
+    if (tempFloat <= 15.0f) {
+      mqtt.addMensagemAlerta("Tanque de Final: Temperatura abaixo dos 15 graus ");
+    }
+    if (tempFloat >= 35.0f) {
+      mqtt.addMensagemAlerta("Tanque de Final: Temperatura acima dos 35 graus ");
+    }
+
     atualizaTelemetria();                               // Atualiza os dados do processo no objeto JSON e no buffer para envio
     mqtt.publish(TOPICO_TELEMETRIA, bufferTelemetria);  // Envia a telemetria atualizada para o broker MQTT no tópico definido
     mqtt.publicarMensagensAlerta();                     // Publica mensagens de alerta acumuladas no buffer, caso existam
@@ -611,178 +685,185 @@ void loop() {
   // TE.1 - Se tanque efluentes nível alto && armazenamento não nível alto, Aciona PM3
   // TE.2 - Se Armazenamento Nível alto || Efluentes Nível baixo, Desaciona PM3
 
-  /* ----- Processo Tanque Armazenamento ----- */
-  if (processo.etapaAtual == Processo::Etapa::Inicial) {             // Tanque de armazenamento Enchendo
-    if (tanqueArmazenamento.isNivelAlto()) {                         // (1.1) Se tanque de armazenamento em nível alto
-      dtArmazenamento = millis();                                    // Atualiza variável auxiliar com o tempo atual em milissegundos
-      processo.etapaAtual = Processo::Etapa::VerificNivelAltoArmaz;  // (-> 1.1) Muda a etapa do processo para "VerificNivelAltoArmaz"
-    }
-  }
-
-  if (processo.etapaAtual == Processo::Etapa::VerificNivelAltoArmaz) {  // Verificando nível do tanque de armazenamento
-    if (tanqueArmazenamento.isNivelAlto()) {                            // (1.1) Se nível alto tanque de armazenamento
-      if (millis() - dtArmazenamento >= tempoDeVerificacao) {           // (1.2) Verifica se o tempo de verificação foi atingido desde o último acionamento
-        tanqueArmazenamento.ligaAtuador(0);                             // (1.2)Liga a bomba PM1 para transferir água para o tanque de ativos
-        processo.etapaAtual = Processo::Etapa::EsvaziandoTqArmaz;       // (-> 1.2) Muda a etapa do processo para "EsvaziandoTqArmaz"
+  if (processo.modoOperacao == Processo::ModoOperacao::Automatico) {
+    /* ----- Processo Tanque Armazenamento ----- */
+    if (processo.etapaAtual == Processo::Etapa::Inicial) {             // Tanque de armazenamento Enchendo
+      if (tanqueArmazenamento.isNivelAlto()) {                         // (1.1) Se tanque de armazenamento em nível alto
+        dtArmazenamento = millis();                                    // Atualiza variável auxiliar com o tempo atual em milissegundos
+        processo.etapaAtual = Processo::Etapa::VerificNivelAltoArmaz;  // (-> 1.1) Muda a etapa do processo para "VerificNivelAltoArmaz"
       }
     }
-  }
 
-  if (processo.etapaAtual == Processo::Etapa::EsvaziandoTqArmaz) {           // Esvaziando o tanque de armazenamento
-    if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (1.3) Se nível baixo armazenamento ou nivel alto tanque de ativos
-      dtArmazenamento = millis();                                            // Atualiza o tempo atual em milissegundos para o tanque de ativos
-      processo.etapaAtual = Processo::Etapa::VerificTransferenciaAtivos;     // (-> 1.3)Muda a etapa do processo para "VerificTransferenciaAtivos"
-    }
-  }
-
-  if (processo.etapaAtual == Processo::Etapa::VerificTransferenciaAtivos) {  // Verificando nível do tanque de ativos
-    if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (1.3) Se nível baixo armazenamento ou nivel alto tanque de ativos
-      if (millis() - dtArmazenamento >= tempoDeVerificacao) {                // (2.1) Verifica se o tempo de verificação foi atingido desde o último acionamento
-        tanqueArmazenamento.desligaAtuador(0);                               // (2.1) Desliga a bomba PM1 para interromper a transferência de água para o tanque de ativos
-
-        if (!tanqueAtivos.isNivelAlto()) {                           // (2.2) Se o tanque de ativos ainda não estiver cheio
-          processo.etapaAtual = Processo::Etapa::Inicial;            // (-> 2.2)Muda a etapa do processo para "Inicial"
-        } else {                                                     // (2.3) Caso esteja cheio
-          tanqueAtivos.ligaAtuador(1);                               // (2.3) Liga o misturador RM1 para iniciar a agitação da água no tanque de ativos
-          dtDosagemCoagulante = millis();                            // (2.4) Atualiza o temporizador de dozagem do coagulante
-          dtPausaDosagem = millis();                                 // (2.4) Atualiza o temporizador de pausa da dosagem do coagulante
-          processo.etapaAtual = Processo::Etapa::DosandoCoagulante;  // (-> 2.4) Muda a etapa do processo para "DosandoCoagulante"
+    if (processo.etapaAtual == Processo::Etapa::VerificNivelAltoArmaz) {  // Verificando nível do tanque de armazenamento
+      if (tanqueArmazenamento.isNivelAlto()) {                            // (1.1) Se nível alto tanque de armazenamento
+        if (millis() - dtArmazenamento >= tempoDeVerificacao) {           // (1.2) Verifica se o tempo de verificação foi atingido desde o último acionamento
+          tanqueArmazenamento.ligaAtuador(0);                             // (1.2)Liga a bomba PM1 para transferir água para o tanque de ativos
+          processo.etapaAtual = Processo::Etapa::EsvaziandoTqArmaz;       // (-> 1.2) Muda a etapa do processo para "EsvaziandoTqArmaz"
         }
       }
     }
-  }
 
-  /* ----- Processo Tanque Ativos ----- */
-  if (processo.etapaAtual == Processo::Etapa::DosandoCoagulante) {  // Dosando o coagulante e verificando parâmetros
-    tanqueAtivos.ligaAtuador(2);                                    // (3.1) Liga o dosador do coagulante
-
-    // Se o resto do (tempo atual menos a ultima atualização) dividido pelo tempo de pausa for == a 1, significa que se passou o tempo definido desde a ultima verificação
-    if ((millis() - dtPausaDosagem) >= tempoPausaDosagem) {         // (3.2) Após dosar uma pequena quantidade de coagulante
-      tanqueAtivos.desligaAtuador(2);                               // (3.3) Desliga o dosador de coagulante
-      processo.controleEtapa = Processo::Etapa::DosandoCoagulante;  // (3.4) Atualiza o controle do processo como DosandoCoagulante garantindo o retorno para a dosagem de coagulante caso necessário
-
-      if ((millis() - dtDosagemCoagulante) >= tempoDosagemCoagulante) {  // (3.5) Se o tempo total de dosagem do coagulante for alcançado
-        processo.controleEtapa = Processo::Etapa::PreparaCoagulacao;     // (3.6) Atualiza controle de etapa do processo
+    if (processo.etapaAtual == Processo::Etapa::EsvaziandoTqArmaz) {           // Esvaziando o tanque de armazenamento
+      if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (1.3) Se nível baixo armazenamento ou nivel alto tanque de ativos
+        dtArmazenamento = millis();                                            // Atualiza o tempo atual em milissegundos para o tanque de ativos
+        processo.etapaAtual = Processo::Etapa::VerificTransferenciaAtivos;     // (-> 1.3)Muda a etapa do processo para "VerificTransferenciaAtivos"
       }
-
-      dtHomogeneizacao = millis();                           // (3.7) Atualiza temporizador de Homogeneizacao
-      dtPausaDosagem = millis();                             // (3.7) Atualiza temporizador de pausa da dosagem do coagulante
-      processo.etapaAtual = Processo::Etapa::VerificandoPh;  // (-> 3.7) Muda a etapa do processo para "VerificaPH"
     }
-  }
 
-  if (processo.etapaAtual == Processo::Etapa::VerificandoPh) {  // Verificando o pH após a dosagem de quimicos
-    if (millis() - dtHomogeneizacao >= tempoHomogeneizacao) {   // (4.1) Se o tempo de homogeneização concluido
-      float ph = tanqueAtivos.getPH();
+    if (processo.etapaAtual == Processo::Etapa::VerificTransferenciaAtivos) {  // Verificando nível do tanque de ativos
+      if (tanqueArmazenamento.isNivelBaixo() || tanqueAtivos.isNivelAlto()) {  // (1.3) Se nível baixo armazenamento ou nivel alto tanque de ativos
+        if (millis() - dtArmazenamento >= tempoDeVerificacao) {                // (2.1) Verifica se o tempo de verificação foi atingido desde o último acionamento
+          tanqueArmazenamento.desligaAtuador(0);                               // (2.1) Desliga a bomba PM1 para interromper a transferência de água para o tanque de ativos
 
-      if (ph < (6.0f + histerese)) {                                         // (4.2) Se o ph da agua estiver muito ácido
-        dtDosagemAlcalinizante = millis();                                   // (4.2) Atualiza o temporizador de dosagem do alcalinizante
-        processo.controleEtapa = Processo::Etapa::DosandoAlcalinizante;      // (4.3) Muda o controle de etapa do processo para "DosandoAlcalinizante"
-      } else if (ph >= alvoPhCoagulante - histerese &&                       // (4.4) Se ph estiver acima do parâmetro de pH - histerese
-                 ph <= alvoPhCoagulante + histerese) {                       // (4.4) Ou abaixo do parâmetro + histerese
-        if (processo.controleEtapa == Processo::Etapa::PreparaCoagulacao) {  // (4.5) Se o controle do processo indicar que a proxima etapa é a coagulação
-          dtCoagulacao = millis();                                           // (4.6) Atualiza temporizador de coagulação
+          if (!tanqueAtivos.isNivelAlto()) {                           // (2.2) Se o tanque de ativos ainda não estiver cheio
+            processo.etapaAtual = Processo::Etapa::Inicial;            // (-> 2.2)Muda a etapa do processo para "Inicial"
+          } else {                                                     // (2.3) Caso esteja cheio
+            tanqueAtivos.ligaAtuador(1);                               // (2.3) Liga o misturador RM1 para iniciar a agitação da água no tanque de ativos
+            dtDosagemCoagulante = millis();                            // (2.4) Atualiza o temporizador de dozagem do coagulante
+            dtPausaDosagem = millis();                                 // (2.4) Atualiza o temporizador de pausa da dosagem do coagulante
+            processo.etapaAtual = Processo::Etapa::DosandoCoagulante;  // (-> 2.4) Muda a etapa do processo para "DosandoCoagulante"
+          }
         }
-      } else if (ph > alvoPhCoagulante + histerese) {                 // (4.7) Se pH alcalino
-        dtPausaDosagem = millis();                                    // (4.7) Atualiza temporizador de dosagem do coagulante
-        processo.controleEtapa = Processo::Etapa::DosandoCoagulante;  // (4.7) Atualiza controle do processo indicando a proxima etapa como DosandoCoagulante
-      }
-
-      processo.etapaAtual = processo.controleEtapa;  // (-> 4.8) Muda a etapa do processo para "processo.controleEtapa"
-    }
-  }
-
-  if (processo.etapaAtual == Processo::Etapa::DosandoAlcalinizante) {  // Dosando o alcalinizante e verificando parâmetros
-    tanqueAtivos.ligaAtuador(3);                                       // (5.1) Liga o dosador do alcalinizante
-
-    if (((millis() - dtDosagemAlcalinizante) >= tempoDosagemAlcalinizante)) {  // (5.2) Após dosar uma pequena quantidade de alcalinizante
-      tanqueAtivos.desligaAtuador(3);                                          // (5.3) Desliga DM2
-      processo.controleEtapa = Processo::Etapa::DosandoCoagulante;             // (5.4) Atualiza o controle do processo para voltar a etapa de dosagem de coagulante após verificar pH
-      processo.etapaAtual = Processo::Etapa::VerificandoPh;                    // (-> 5.4) Muda a etapa do processo para VerificandoPh
-    }
-  }
-
-  /* Preparo para Coagulação */
-  if (processo.etapaAtual == Processo::Etapa::PreparaCoagulacao) {  // Inicio da coagulação
-    if (millis() - dtCoagulacao >= tempoHomogeneizacao) {           // (6.1) Mantém o agitador ligado pelo tempo definido para homogeneização
-      dtCoagulacao = millis();                                      // (6.2) Atualiza o tempo atual em milissegundos
-      tanqueAtivos.desligaAtuador(1);                               // (6.3) Desliga o mexedor RM1 para aguardar a coagulação dos sólidos
-      processo.etapaAtual = Processo::Etapa::Decantacao;            // (-> 6.4) Muda a etapa do processo para "Coagulação"
-    }
-  }
-
-  /* Coagulação */
-  if (processo.etapaAtual == Processo::Etapa::Decantacao) {                 // Aguardando coagulação dos sólidos
-    if (millis() - dtCoagulacao >= tempoCoagulacao) {                       // (7.1) Aguarda o tempo determinado de coagulação antes de seguir com o processo
-      tanqueAtivos.ligaAtuador(5);                                          // (7.2) Aciona SV1
-      dtDescargaEfluentes = millis();                                       // (7.3) Atualiza o temporizador de descarga de efluentes
-      processo.etapaAtual = Processo::Etapa::PreparandoLibercaoSedimentos;  // (-> 7.3) Muda a etapa do processo para "PreparandoLibercaoSedimentos
-    }
-  }
-
-  /* Efluentes */
-  if (processo.etapaAtual == Processo::Etapa::PreparandoLibercaoSedimentos) {
-    if (millis() - dtDescargaEfluentes >= tempoDeVerificacao) {    // (7.6) Aguarda tempo de transferencia
-      tanqueAtivos.ligaAtuador(0);                                 // (7.5) Liga bomba de transferencia
-      dtDescargaEfluentes = millis();                              // (7.5) Atualiza o tempo atual em milissegundos
-      processo.etapaAtual = Processo::Etapa::RemovendoSedimentos;  // (-> 7.5) Muda a etapa do processo para "RemovendoSedimentos
-    }
-  }
-
-  if (processo.etapaAtual == Processo::Etapa::RemovendoSedimentos) {
-    if (millis() - dtDescargaEfluentes >= tempoDescargaEfluentes) {  // (7.6) Aguarda tempo de transferencia
-      tanqueAtivos.desligaAtuador(0);                                // (7.7) Desliga bomba
-      tanqueAtivos.desligaAtuador(5);                                // (7.7) Desliga solenoide
-      tanqueAtivos.ligaAtuador(1);                                   // (7.7) Liga Agitação
-      tanqueAtivos.ligaAtuador(4);                                   // (7.7) Liga dosador de sanitizante
-      dtDosagemSanitizante = millis();                               // (7.8) Atualiza temporizador de dosagem de sanitizante
-      processo.etapaAtual = Processo::Etapa::DosandoSanitizante;     // (-> 7.8) Muda etapa do processo para "DosandoSanitizante"
-    }
-  }
-
-  /* Sanitização */
-  if (processo.etapaAtual == Processo::Etapa::DosandoSanitizante) {         // Dosando o sanitizante e verificando parâmetros
-    if ((millis() - dtDosagemSanitizante) >= tempoDosagemSanitizante) {     // (8.1) Se o tempo total de dosagem do sanitizante for alcançado
-      tanqueAtivos.desligaAtuador(4);                                       // (8.2) Desliga o dosador de sanitizante
-      dtAtivos = millis();                                                  // (8.3) Atualiza temporizador
-      tanqueAtivos.ligaAtuador(6);                                          // (8.4) Aciona Solenoide de transferencia para o tanque final
-      processo.etapaAtual = Processo::Etapa::PreparandoEsvaziamentoAtivos;  // (-> 8.4) Atualiza etapa do processo
-    }
-  }
-
-  /* Transferencia para tanque final */
-  if (processo.etapaAtual == Processo::Etapa::PreparandoEsvaziamentoAtivos) {  // Preparando para transferir água tratada para o tanque final
-    if (millis() - dtAtivos >= tempoDeVerificacao) {                           // (8.5) Se tempo de verificação atingido
-      if (tanqueFinal.isNivelBaixo()) {                                        // (8.6) Se tanque final em nível baixo
-        tanqueAtivos.ligaAtuador(0);                                           // (8.6) Liga bomba de transferencia
-        processo.etapaAtual = Processo::Etapa::EsvaziandoTanqueAtivos;         // (-> 8.6) Muda etapa do processo para EsvaziandoTanqueAtivos
       }
     }
-  }
 
-  if (processo.etapaAtual == Processo::Etapa::EsvaziandoTanqueAtivos) {  // Transferindo água tratada
-    if (tanqueFinal.isNivelAlto() || tanqueAtivos.isNivelBaixo()) {      // (9.1) Se tanque final em nível baixo
-      dtFinal = millis();                                                // (9.2) Atualiza o temporizador
-      processo.etapaAtual = Processo::Etapa::VerificTransferenciaFinal;  // (-> 9.2) Muda etapa do processo para VerificTransferenciaFinal
+    /* ----- Processo Tanque Ativos ----- */
+    if (processo.etapaAtual == Processo::Etapa::DosandoCoagulante) {  // Dosando o coagulante e verificando parâmetros
+      tanqueAtivos.ligaAtuador(2);                                    // (3.1) Liga o dosador do coagulante
+
+      // Se o resto do (tempo atual menos a ultima atualização) dividido pelo tempo de pausa for == a 1, significa que se passou o tempo definido desde a ultima verificação
+      if ((millis() - dtPausaDosagem) >= tempoPausaDosagem) {         // (3.2) Após dosar uma pequena quantidade de coagulante
+        tanqueAtivos.desligaAtuador(2);                               // (3.3) Desliga o dosador de coagulante
+        processo.controleEtapa = Processo::Etapa::DosandoCoagulante;  // (3.4) Atualiza o controle do processo como DosandoCoagulante garantindo o retorno para a dosagem de coagulante caso necessário
+
+        if ((millis() - dtDosagemCoagulante) >= tempoDosagemCoagulante) {  // (3.5) Se o tempo total de dosagem do coagulante for alcançado
+          processo.controleEtapa = Processo::Etapa::PreparaCoagulacao;     // (3.6) Atualiza controle de etapa do processo
+        }
+
+        dtHomogeneizacao = millis();                           // (3.7) Atualiza temporizador de Homogeneizacao
+        dtPausaDosagem = millis();                             // (3.7) Atualiza temporizador de pausa da dosagem do coagulante
+        processo.etapaAtual = Processo::Etapa::VerificandoPh;  // (-> 3.7) Muda a etapa do processo para "VerificaPH"
+      }
     }
-  }
 
-  /* ----- Processo Tanque Final ----- */
-  if (processo.etapaAtual == Processo::Etapa::VerificTransferenciaFinal) {  // Preparando para transferir água tratada para o tanque final
-    if (tanqueFinal.isNivelAlto() || tanqueAtivos.isNivelBaixo()) {         // (9.3) Se nível do tanque de ativos baixo ou final alto
-      if (millis() - dtFinal >= tempoDeVerificacao) {                       // (9.4) Se tempo de verificação atingido
-        tanqueAtivos.desligaAtuador(0);                                     // (9.4) Desliga bomba de transferencia PM2
-        tanqueFinal.ligaAtuador(0);                                         // (9.5) Liga mexedor RM2
-        tanqueFinal.ligaAtuador(1);                                         // (9.5) Liga lampada UV
-        dtFinal = millis();                                                 // (9.5) Atualiza o temporizador do tanque final
-        processo.etapaAtual = Processo::Etapa::TratamentoUv;                // (-> 9.5) Muda etapa do processo para TratamentoUv
+    if (processo.etapaAtual == Processo::Etapa::VerificandoPh) {  // Verificando o pH após a dosagem de quimicos
+      if (millis() - dtHomogeneizacao >= tempoHomogeneizacao) {   // (4.1) Se o tempo de homogeneização concluido
+        float ph = tanqueAtivos.getPH();
+
+        if (ph < (6.0f + histerese)) {                                         // (4.2) Se o ph da agua estiver muito ácido
+          dtDosagemAlcalinizante = millis();                                   // (4.2) Atualiza o temporizador de dosagem do alcalinizante
+          processo.controleEtapa = Processo::Etapa::DosandoAlcalinizante;      // (4.3) Muda o controle de etapa do processo para "DosandoAlcalinizante"
+        } else if (ph >= alvoPhCoagulante - histerese &&                       // (4.4) Se ph estiver acima do parâmetro de pH - histerese
+                   ph <= alvoPhCoagulante + histerese) {                       // (4.4) Ou abaixo do parâmetro + histerese
+          if (processo.controleEtapa == Processo::Etapa::PreparaCoagulacao) {  // (4.5) Se o controle do processo indicar que a proxima etapa é a coagulação
+            dtCoagulacao = millis();                                           // (4.6) Atualiza temporizador de coagulação
+          }
+        } else if (ph > alvoPhCoagulante + histerese) {                 // (4.7) Se pH alcalino
+          dtPausaDosagem = millis();                                    // (4.7) Atualiza temporizador de dosagem do coagulante
+          processo.controleEtapa = Processo::Etapa::DosandoCoagulante;  // (4.7) Atualiza controle do processo indicando a proxima etapa como DosandoCoagulante
+        }
+
+        processo.etapaAtual = processo.controleEtapa;  // (-> 4.8) Muda a etapa do processo para "processo.controleEtapa"
+      }
+    }
+
+    if (processo.etapaAtual == Processo::Etapa::DosandoAlcalinizante) {  // Dosando o alcalinizante e verificando parâmetros
+      tanqueAtivos.ligaAtuador(3);                                       // (5.1) Liga o dosador do alcalinizante
+
+      if (((millis() - dtDosagemAlcalinizante) >= tempoDosagemAlcalinizante)) {  // (5.2) Após dosar uma pequena quantidade de alcalinizante
+        tanqueAtivos.desligaAtuador(3);                                          // (5.3) Desliga DM2
+        processo.controleEtapa = Processo::Etapa::DosandoCoagulante;             // (5.4) Atualiza o controle do processo para voltar a etapa de dosagem de coagulante após verificar pH
+        processo.etapaAtual = Processo::Etapa::VerificandoPh;                    // (-> 5.4) Muda a etapa do processo para VerificandoPh
+      }
+    }
+
+    /* Preparo para Coagulação */
+    if (processo.etapaAtual == Processo::Etapa::PreparaCoagulacao) {  // Inicio da coagulação
+      if (millis() - dtCoagulacao >= tempoHomogeneizacao) {           // (6.1) Mantém o agitador ligado pelo tempo definido para homogeneização
+        dtCoagulacao = millis();                                      // (6.2) Atualiza o tempo atual em milissegundos
+        tanqueAtivos.desligaAtuador(1);                               // (6.3) Desliga o mexedor RM1 para aguardar a coagulação dos sólidos
+        processo.etapaAtual = Processo::Etapa::Decantacao;            // (-> 6.4) Muda a etapa do processo para "Coagulação"
+      }
+    }
+
+    /* Coagulação */
+    if (processo.etapaAtual == Processo::Etapa::Decantacao) {                 // Aguardando coagulação dos sólidos
+      if (millis() - dtCoagulacao >= tempoCoagulacao) {                       // (7.1) Aguarda o tempo determinado de coagulação antes de seguir com o processo
+        tanqueAtivos.ligaAtuador(5);                                          // (7.2) Aciona SV1
+        dtDescargaEfluentes = millis();                                       // (7.3) Atualiza o temporizador de descarga de efluentes
+        processo.etapaAtual = Processo::Etapa::PreparandoLibercaoSedimentos;  // (-> 7.3) Muda a etapa do processo para "PreparandoLibercaoSedimentos
+      }
+    }
+
+    /* Efluentes */
+    if (processo.etapaAtual == Processo::Etapa::PreparandoLibercaoSedimentos) {
+      if (millis() - dtDescargaEfluentes >= tempoDeVerificacao) {    // (7.6) Aguarda tempo de transferencia
+        tanqueAtivos.ligaAtuador(0);                                 // (7.5) Liga bomba de transferencia
+        dtDescargaEfluentes = millis();                              // (7.5) Atualiza o tempo atual em milissegundos
+        processo.etapaAtual = Processo::Etapa::RemovendoSedimentos;  // (-> 7.5) Muda a etapa do processo para "RemovendoSedimentos
+      }
+    }
+
+    if (processo.etapaAtual == Processo::Etapa::RemovendoSedimentos) {
+      if (millis() - dtDescargaEfluentes >= tempoDescargaEfluentes) {  // (7.6) Aguarda tempo de transferencia
+        tanqueAtivos.desligaAtuador(0);                                // (7.7) Desliga bomba
+        tanqueAtivos.desligaAtuador(5);                                // (7.7) Desliga solenoide
+        tanqueAtivos.ligaAtuador(1);                                   // (7.7) Liga Agitação
+        tanqueAtivos.ligaAtuador(4);                                   // (7.7) Liga dosador de sanitizante
+        dtDosagemSanitizante = millis();                               // (7.8) Atualiza temporizador de dosagem de sanitizante
+        processo.etapaAtual = Processo::Etapa::DosandoSanitizante;     // (-> 7.8) Muda etapa do processo para "DosandoSanitizante"
+      }
+    }
+
+    /* Sanitização */
+    if (processo.etapaAtual == Processo::Etapa::DosandoSanitizante) {         // Dosando o sanitizante e verificando parâmetros
+      if ((millis() - dtDosagemSanitizante) >= tempoDosagemSanitizante) {     // (8.1) Se o tempo total de dosagem do sanitizante for alcançado
+        tanqueAtivos.desligaAtuador(4);                                       // (8.2) Desliga o dosador de sanitizante
+        dtAtivos = millis();                                                  // (8.3) Atualiza temporizador
+        tanqueAtivos.ligaAtuador(6);                                          // (8.4) Aciona Solenoide de transferencia para o tanque final
+        processo.etapaAtual = Processo::Etapa::PreparandoEsvaziamentoAtivos;  // (-> 8.4) Atualiza etapa do processo
+      }
+    }
+
+    /* Transferencia para tanque final */
+    if (processo.etapaAtual == Processo::Etapa::PreparandoEsvaziamentoAtivos) {  // Preparando para transferir água tratada para o tanque final
+      if (millis() - dtAtivos >= tempoDeVerificacao) {                           // (8.5) Se tempo de verificação atingido
+        if (tanqueFinal.isNivelBaixo()) {                                        // (8.6) Se tanque final em nível baixo
+          tanqueAtivos.ligaAtuador(0);                                           // (8.6) Liga bomba de transferencia
+          processo.etapaAtual = Processo::Etapa::EsvaziandoTanqueAtivos;         // (-> 8.6) Muda etapa do processo para EsvaziandoTanqueAtivos
+        }
+      }
+    }
+
+    if (processo.etapaAtual == Processo::Etapa::EsvaziandoTanqueAtivos) {  // Transferindo água tratada
+      if (tanqueFinal.isNivelAlto() || tanqueAtivos.isNivelBaixo()) {      // (9.1) Se tanque final em nível baixo
+        dtFinal = millis();                                                // (9.2) Atualiza o temporizador
+        processo.etapaAtual = Processo::Etapa::VerificTransferenciaFinal;  // (-> 9.2) Muda etapa do processo para VerificTransferenciaFinal
+      }
+    }
+
+    /* ----- Processo Tanque Final ----- */
+    if (processo.etapaAtual == Processo::Etapa::VerificTransferenciaFinal) {  // Preparando para transferir água tratada para o tanque final
+      if (tanqueFinal.isNivelAlto() || tanqueAtivos.isNivelBaixo()) {         // (9.3) Se nível do tanque de ativos baixo ou final alto
+        if (millis() - dtFinal >= tempoDeVerificacao) {                       // (9.4) Se tempo de verificação atingido
+          tanqueAtivos.desligaAtuador(0);                                     // (9.4) Desliga bomba de transferencia PM2
+          tanqueAtivos.desligaAtuador(6);                                     // (9.4) Desliga solenoide SV2
+          tanqueFinal.ligaAtuador(0);                                         // (9.5) Liga mexedor RM2
+          tanqueFinal.ligaAtuador(1);                                         // (9.5) Liga lampada UV
+          dtFinal = millis();                                                 // (9.5) Atualiza o temporizador do tanque final
+          processo.etapaAtual = Processo::Etapa::TratamentoUv;                // (-> 9.5) Muda etapa do processo para TratamentoUv
+        }
+      }
+    }
+
+    if (processo.etapaAtual == Processo::Etapa::TratamentoUv) {  // Tratamento UV
+      if (millis() - dtFinal >= tempoTratamentoUv) {             // (9.6) Se tempo de tratamento mínimo atingido
+        processo.etapaAtual = Processo::Etapa::Finalizado;       // (-> 9.7) Muda etapa do processo para Finalizado
       }
     }
   }
 
-  if (processo.etapaAtual == Processo::Etapa::TratamentoUv) {  // Tratamento UV
-    if (millis() - dtFinal >= tempoTratamentoUv) {             // (9.6) Se tempo de tratamento mínimo atingido
-      processo.etapaAtual = Processo::Etapa::Finalizado;       // (-> 9.7) Muda etapa do processo para Finalizado
-    }
-  }
+  // Serial.print("Tempo total dentro de loop(): ");
+  // Serial.print(millis() - dt);
+  // Serial.println("ms");
 }

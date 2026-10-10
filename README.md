@@ -46,10 +46,12 @@ Abaixo está um exemplo de como o arquivo `configuracoes.h` deve ser estruturado
 ## Arquitetura de Hardware & Bibliotecas
 
 ### **Periféricos da Maquete**
+
 * **Sensores:** pH, Turbidez, Nível dos Tanques e Temperatura.
 * **Atuadores:** Motores / Reles e Válvula Solenoide.
 
 ### **Bibliotecas Principais**
+
 * **[WiFi.h](https://www.arduino.cc/en/Reference/WiFi)** — Conexão do ESP32 à rede Wi-Fi local no modo *Station*.
 * **[PubSubClient](https://github.com/knolleary/pubsubclient)** — Cliente MQTT leve para comunicação com o broker na nuvem (**[HiveMQ Cloud](https://www.hivemq.com/)**).
 * **[AsyncMqttClient](https://github.com/marvinroger/async-mqtt-client)** — Cliente MQTT assíncrono para gerenciamento de mensagens e eventos de rede de forma não bloqueante.
@@ -67,27 +69,28 @@ Abaixo está um exemplo de como o arquivo `configuracoes.h` deve ser estruturado
 ```
 
 ## Próximos Passos
-- [X] Configuração inicial do projeto
-- [X] Criação de Classes para os sensores
-  - [X] SensorTurbidez
-    - [X] Calibração
-  - [X] PH
-     - [X] Calibração
-  - [X] Temperatura
-- [X] Criação de Classes para atuadores
-- [X] Desenvolvimento inicial do fluxo do processo
-  - [X] Configuração inicial das classes, sensores e atuadore
-  - [X] Processo tanque inicial
-  - [X] Processo tanque de ativos
-    - [X] Dosagem de Coagulante
-    - [X] Dosagem de alcalinizante
-    - [X] Dosagem de sanitizante
-  - [X] Processo tanque de efluentes
-  - [X] Processo tanque de água tratada
-    - [X] Tratamento UV
-- [ ] Comunicação com HiveMQ Cloud
-  - [X] Conexão com o broker MQTT
-  - [X] Publicação das leituras dos sensores
-  - [ ] Recebimento de comandos para acionamento dos atuadores
-  - [ ] Criação de alertas
-- [ ] Teste final do processo
+
+* [X] Configuração inicial do projeto
+* [X] Criação de Classes para os sensores
+  * [X] SensorTurbidez
+    * [X] Calibração
+  * [X] PH
+    * [X] Calibração
+  * [X] Temperatura
+* [X] Criação de Classes para atuadores
+* [X] Desenvolvimento inicial do fluxo do processo
+  * [X] Configuração inicial das classes, sensores e atuadore
+  * [X] Processo tanque inicial
+  * [X] Processo tanque de ativos
+    * [X] Dosagem de Coagulante
+    * [X] Dosagem de alcalinizante
+    * [X] Dosagem de sanitizante
+  * [X] Processo tanque de efluentes
+  * [X] Processo tanque de água tratada
+    * [X] Tratamento UV
+* [X] Comunicação com HiveMQ Cloud
+  * [X] Conexão com o broker MQTT
+  * [X] Publicação das leituras dos sensores
+  * [X] Recebimento de comandos para acionamento dos atuadores
+  * [X] Criação de alertas
+* [ ] Teste final do processo
