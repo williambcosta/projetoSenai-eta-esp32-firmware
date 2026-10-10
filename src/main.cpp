@@ -170,6 +170,7 @@ float alvoPhCoagulante = 7.0f;     // Alvo de pH após dosagem do Coagulante
 float alvoPhAlcalinizante = 7.0f;  // Alvo de pH após dosagem do Alcalinizante
 float alvoPhSanitizante = 7.0f;    // Alvo de pH após dosagem do Sanitizante
 float alvoNtu = 5.0f;              // NTU alvo após coagulação
+float tempFloat = 0.0f;            // Variável temporária para armazenar valores de sensores
 
 // Instancia do gerenciador MQTT para comunicação com o HiveMQ Cloud
 MqttManager mqtt = MqttManager(WIFI_SSID, WIFI_SENHA, MQTT_BROKER, MQTT_PORTA, MQTT_USUARIO, MQTT_SENHA);
@@ -341,8 +342,8 @@ void loop() {
   // Verifica se existe alguma mensagem recebida do broker MQTT e processa a mensagem
   if (mqtt.handle()) {
     mqtt.getMensagem(mensagem, 128);
-    //Serial.println(strcmp(mensagem, "alerta"));
-    // Alterando o modo de operação de acordo com a mensagem recebida do broker MQTT
+    // Serial.println(strcmp(mensagem, "alerta"));
+    //  Alterando o modo de operação de acordo com a mensagem recebida do broker MQTT
     if (strcmp(mensagem, "MANUAL") == 0) {
       Serial.println("Alterando para o modo manual");
       processo.modoOperacao = Processo::ModoOperacao::Manual;
@@ -361,7 +362,7 @@ void loop() {
      * O modo de Manual vai apenas interpretar os comandos enviádos pelo supervisório
      */
     if (processo.modoOperacao == Processo::ModoOperacao::Manual) {
-      // TODO: Garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com SV2 ligado etapa vai ser esvaziando tanque Ativos.
+      // O modo manual tenta garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com SV2 ligado etapa vai ser esvaziando tanque Ativos.
       // Isso vai ser dificil de testar, provávelmente para o protótipo seja mais interessante continuar de onde estava antes do modo manual
 
       if (strcmp(mensagem, "PM1") == 0) {                              // Caso comando PM1
@@ -469,7 +470,6 @@ void loop() {
 
   // Envia as informações do processo para o broker MQTT
   if (((millis() - dtUpdate) >= tempoUpdate) && mqtt.isConnected()) {
-    // TODO: Alterar lógica dos alertas para enviar apénas o código do alerta. Desconsiderar o envio caso o alerta esteja em aberto
     /******************************************/
     /***** Alertas ****************************/
     /******************************************/
@@ -488,7 +488,7 @@ void loop() {
     }
 
     // pH //
-    float tempFloat = tanqueAtivos.getPH();
+    tempFloat = tanqueAtivos.getPH();
     if (tempFloat <= 4.0f) {
       mqtt.ativarAlerta(5);
     }
@@ -873,5 +873,5 @@ void loop() {
   // Serial.print("Tempo total dentro de loop(): ");
   // Serial.print(millis() - dt);
   // Serial.println("ms");
-  //Serial.println("");
+  // Serial.println("");
 }
