@@ -9,30 +9,33 @@ MqttManager::MqttManager(const char* ssid, const char* wifiSenha,
     : alertas{
           {0, 0, "Alertas", false, false},
           {1, 2, "Tanque de Armazenamento: Falha em chaves de nível", false, false},
-          {2, 2, "Tanque de Ativos: Falha em chaves de nível", false, false},
-          {3, 2, "Tanque Final: Falha em chaves de nível", false, false},
-          {4, 2, "Tanque de Eluentes: Falha em chaves de nível", false, false},
-          {5, 1, "Tanque de Ativos: pH abaixo de 4.0", false, false},
-          {6, 1, "Tanque de Ativos: pH acima de 8.0", false, false},
-          {7, 1, "Tanque Final: pH abaixo de 4.0", false, false},
-          {8, 1, "Tanque Final: pH acima de 8.0", false, false},
-          {9, 2, "Tanque Final: Turbidez acima de 5 NTU", false, false},
-          {10, 0, "Tanque de Armazenamento: Temperatura abaixo dos 15 graus", false, false},
-          {11, 0, "Tanque de Armazenamento: Temperatura acima dos 35 graus", false, false},
-          {12, 0, "Tanque de Ativos: Temperatura abaixo dos 15 graus", false, false},
-          {13, 0, "Tanque de Ativos: Temperatura acima dos 35 graus", false, false},
-          {14, 0, "Tanque Final: Temperatura abaixo dos 15 graus", false, false},
-          {15, 0, "Tanque Final: Temperatura acima dos 35 graus", false, false},
-          {16, 1, "Impossível Ligar PM1: Tanque inicial em nível baixo", false, false},
-          {17, 1, "Impossível Ligar PM1: Tanque de ativos em nível alto", false, false},
-          {18, 1, "Impossível Ligar PM2: Nenhuma solenoide acionada", false, false},
-          {19, 1, "Impossível Ligar PM2: Ambas as solenoides estão acionadas", false, false},
-          {20, 1, "Impossível Ligar PM2: Tanque de efluentes em nível alto", false, false},
-          {21, 1, "Impossível Ligar PM2: Tanque final em nível alto", false, false},
-          {22, 1, "Impossível Ligar PM3: Tanque de armazenamento em nível alto", false, false},
-          {23, 1, "Impossível Ligar PM3: Tanque de efluentes em nível baixo", false, false},
-          {24, 1, "Impossível Ligar SV1: Solenoide SV2 ligada", false, false},
-          {25, 1, "Impossível Ligar SV2: Solenoide SV1 ligada", false, false}} {
+          {2, 2, "Tanque de Armazenamento: Falha no sensor de temperatura", false, false},
+          {3, 2, "Tanque de Ativos: Falha em chaves de nível", false, false},
+          {4, 2, "Tanque de Ativos: Falha no sensor de temperatura", false, false},
+          {5, 2, "Tanque Final: Falha em chaves de nível", false, false},
+          {6, 2, "Tanque Final: Falha no sensor de temperatura", false, false},
+          {7, 2, "Tanque de Eluentes: Falha em chaves de nível", false, false},
+          {8, 1, "Tanque de Ativos: pH abaixo de 4.0", false, false},
+          {9, 1, "Tanque de Ativos: pH acima de 8.0", false, false},
+          {10, 1, "Tanque Final: pH abaixo de 4.0", false, false},
+          {11, 1, "Tanque Final: pH acima de 8.0", false, false},
+          {12, 2, "Tanque Final: Turbidez acima de 5 NTU", false, false},
+          {13, 0, "Tanque de Armazenamento: Temperatura abaixo dos 15 graus", false, false},
+          {14, 0, "Tanque de Armazenamento: Temperatura acima dos 35 graus", false, false},
+          {15, 0, "Tanque de Ativos: Temperatura abaixo dos 15 graus", false, false},
+          {16, 0, "Tanque de Ativos: Temperatura acima dos 35 graus", false, false},
+          {17, 0, "Tanque Final: Temperatura abaixo dos 15 graus", false, false},
+          {18, 0, "Tanque Final: Temperatura acima dos 35 graus", false, false},
+          {19, 1, "Impossível Ligar PM1: Tanque inicial em nível baixo", false, false},
+          {20, 1, "Impossível Ligar PM1: Tanque de ativos em nível alto", false, false},
+          {21, 1, "Impossível Ligar PM2: Nenhuma solenoide acionada", false, false},
+          {22, 1, "Impossível Ligar PM2: Ambas as solenoides estão acionadas", false, false},
+          {23, 1, "Impossível Ligar PM2: Tanque de efluentes em nível alto", false, false},
+          {24, 1, "Impossível Ligar PM2: Tanque final em nível alto", false, false},
+          {25, 1, "Impossível Ligar PM3: Tanque de armazenamento em nível alto", false, false},
+          {26, 1, "Impossível Ligar PM3: Tanque de efluentes em nível baixo", false, false},
+          {27, 1, "Impossível Ligar SV1: Solenoide SV2 ligada", false, false},
+          {28, 1, "Impossível Ligar SV2: Solenoide SV1 ligada", false, false}} {
   wifi_ssid = ssid;
   wifi_senha = wifiSenha;
   mqtt_servidor = servidor;
@@ -109,8 +112,9 @@ void MqttManager::mqttCallback(char* topico, byte* mensagem, unsigned int tamanh
 void MqttManager::handleMsg(char* topico, byte* mensagem, unsigned int tamanho) {
   snprintf(msgAtual, tamanho + 1, "%s", mensagem);  // Copia a mensagem recebida para o buffer de mensagem atual
 
-  Serial.printf("[Classe MqttManager] Mensagem recebida no [%s]: %s\n", topico, msgAtual);  // Loga a mensagem recebida no console
+  Serial.printf("[MqttManager - handleMsg] Mensagem recebida no [%s]: %s\n", topico, msgAtual);  // Loga a mensagem recebida no console
   Serial.println("");
+  novaMsg = true;
 }
 
 // Função que deve ser chamada no loop principal para manter a conexão
@@ -126,8 +130,8 @@ bool MqttManager::handle() {
     }
   }
 
-  if (strcmp(msgAtual, ultimaMsg) != 0) {
-    strcpy(ultimaMsg, msgAtual);  // Atualiza a última mensagem recebida
+  if (novaMsg) {
+    novaMsg = false;
     return true;
   } else {
     return false;
@@ -178,9 +182,9 @@ void MqttManager::desativarAlerta(int codigoAlerta) {
 }
 
 // Função para publicar todas as mensagens curtas armazenadas no buffer
-bool MqttManager::publicarMensagensAlerta() {
-  for (int i = 0; i < 26; i++) {
-    if (alertas[i].ativo && !alertas[i].enviado) {
+bool MqttManager::publicarMensagensAlerta(bool forcarRenvio) {
+  for (int i = 0; i < sizeof(alertas) / sizeof(alertas[0]); i++) {
+    if (alertas[i].ativo && (!alertas[i].enviado || forcarRenvio)) {
       // Formata a mensagem de alerta no buffer antes de enviá-la
       snprintf(bufferMsgAlerta,
                sizeof(bufferMsgAlerta),

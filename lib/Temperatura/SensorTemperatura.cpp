@@ -31,7 +31,7 @@ float SensorTemperatura::getTemperatura() {
     temperatura = sensor.getTempC(enderecoSensor);  // Atualiza o valor da temperatura
     sensor.requestTemperatures();                   // Solicita assincronamente a conversão para a próxima leitura
   } else {
-    temperatura = -999.9;  // Caso não exista sensor conectado, retorna valor padrão.
+    temperatura = -999.9f;  // Caso não exista sensor conectado, retorna valor padrão.
   }
 
   return temperatura;
