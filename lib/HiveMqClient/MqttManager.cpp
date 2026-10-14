@@ -55,7 +55,6 @@ void MqttManager::setupWifi() {
   // Dispara a tentativa de conexão sem aguardar em loop bloqueante
   Serial.print("\nIniciando conexão Wi-Fi em ");
   Serial.println(wifi_ssid);
-  Serial.println("");
   WiFi.begin(wifi_ssid, wifi_senha);
 }
 
@@ -70,19 +69,16 @@ void MqttManager::reconnect() {
   // Se Wi-Fi está OK, tenta conectar ao MQTT Broker
   if (!client.connected()) {                                                    // verifica se o cliente MQTT está conectado
     String clientId = "ESP32-ETA-" + String((uint32_t)ESP.getEfuseMac(), HEX);  // Cria um id único para o cliente MQTT baseado no MAC do ESP32
-    Serial.print("Tentando conexão MQTT com HiveMQ...");
-    Serial.println("");
+    Serial.println("\nTentando conexão MQTT com HiveMQ...");
 
     if (client.connect(clientId.c_str(), mqtt_usuario, mqtt_senha)) {  // Tenta conectar ao broker MQTT com o id único e as credenciais fornecidas
-      Serial.println("conectado!");
-      Serial.println("");
+      Serial.println("Conectado!");
       if (mqtt_topico_comandos != nullptr) {     // Se o tópico de comandos foi definido
         client.subscribe(mqtt_topico_comandos);  // Assina o tópico de comandos para receber mensagens
       }
     } else {
       Serial.print("Falha: ");
       Serial.println(client.state());
-      Serial.println("");
     }
   }
 }
@@ -112,8 +108,7 @@ void MqttManager::mqttCallback(char* topico, byte* mensagem, unsigned int tamanh
 void MqttManager::handleMsg(char* topico, byte* mensagem, unsigned int tamanho) {
   snprintf(msgAtual, tamanho + 1, "%s", mensagem);  // Copia a mensagem recebida para o buffer de mensagem atual
 
-  Serial.printf("[MqttManager - handleMsg] Mensagem recebida no [%s]: %s\n", topico, msgAtual);  // Loga a mensagem recebida no console
-  Serial.println("");
+  Serial.printf("\n[MqttManager - handleMsg] Mensagem recebida no [%s]: %s\n", topico, msgAtual);  // Loga a mensagem recebida no console
   novaMsg = true;
 }
 
@@ -150,12 +145,11 @@ bool MqttManager::publish(uint8_t topico, const char* mensagem) {
 
   if (client.publish(topicoSelecionado, mensagem)) {  // Tenta publicar a mensagem
     // Caso bem sucedida loga a saida e retorna true sinalizando o sucesso
-    Serial.println("Mensagem publicada");
+    Serial.println("\nMensagem publicada");
     Serial.print("Topico: ");
     Serial.println(topicoSelecionado);
     Serial.print("Mensagem:");
     Serial.println(mensagem);
-    Serial.println("");
     return true;
   } else {  // Caso contrario sinaliza a falha retornando false
     return false;
@@ -176,7 +170,6 @@ void MqttManager::ativarAlerta(int codigoAlerta) {
 
 // Função para desativar um alerta específico
 void MqttManager::desativarAlerta(int codigoAlerta) {
-  Serial.println("mensagem\n");
   alertas[codigoAlerta].ativo = false;    // Desativa o alerta correspondente ao código fornecido
   alertas[codigoAlerta].enviado = false;  // Marca o alerta como não enviado
 }
@@ -194,9 +187,10 @@ bool MqttManager::publicarMensagensAlerta(bool forcarRenvio) {
                alertas[i].mensagem);
       if (!publish(TOPICO_ALERTAS, bufferMsgAlerta)) {  // Tenta publicar a mensagem de alerta
         return false;                                   // Caso o envio falhe retorna false
+      } else {
+        alertas[i].enviado = true;  // Marca o alerta como enviado
       }
     }
-    alertas[i].enviado = true;  // Marca o alerta como enviado
   }
   return true;
 }
