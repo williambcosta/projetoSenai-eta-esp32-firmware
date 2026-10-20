@@ -330,6 +330,23 @@ void atualizaTelemetria() {
   serializeJson(telemetria, bufferTelemetria);
 }
 
+void desligarTudo() {
+  tanqueArmazenamento.desligaAtuador(0);
+
+  tanqueAtivos.desligaAtuador(0);
+  tanqueAtivos.desligaAtuador(1);
+  tanqueAtivos.desligaAtuador(2);
+  tanqueAtivos.desligaAtuador(3);
+  tanqueAtivos.desligaAtuador(4);
+  tanqueAtivos.desligaAtuador(5);
+  tanqueAtivos.desligaAtuador(6);
+
+  tanqueEfluentes.desligaAtuador(0);
+
+  tanqueFinal.desligaAtuador(0);
+  tanqueFinal.desligaAtuador(1);
+}
+
 /*******************************************************************************************************************************/
 /***** LOOP PRINCIPAL **********************************************************************************************************/
 /*******************************************************************************************************************************/
@@ -350,6 +367,9 @@ void loop() {
     } else if (strcmp(mensagem, "AUTOMATICO") == 0) {
       Serial.println("\n[main - loop] Alterando para o modo automático");
       processo.modoOperacao = Processo::ModoOperacao::Automatico;
+      // O controle de etapas ficaria muito complexo para voltar de onde parou. Para o protótipo desligar tudo e voltar ao inicio é suficiente
+      desligarTudo();
+      processo.etapaAtual = Processo::Etapa::Inicial;
     } else if (strcmp(mensagem, "EMERGENCIA") == 0) {
       Serial.println("\n[main - loop] Alterando para o modo emergência");
       processo.modoOperacao = Processo::ModoOperacao::Emergencia;
@@ -535,20 +555,7 @@ void loop() {
    * Desligando todos os atuadores e garante que o processo reiniciará caso velte ao normal
    */
   if (processo.modoOperacao == Processo::ModoOperacao::Emergencia) {
-    tanqueArmazenamento.desligaAtuador(0);
-
-    tanqueAtivos.desligaAtuador(0);
-    tanqueAtivos.desligaAtuador(1);
-    tanqueAtivos.desligaAtuador(2);
-    tanqueAtivos.desligaAtuador(3);
-    tanqueAtivos.desligaAtuador(4);
-    tanqueAtivos.desligaAtuador(5);
-    tanqueAtivos.desligaAtuador(6);
-
-    tanqueEfluentes.desligaAtuador(0);
-
-    tanqueFinal.desligaAtuador(0);
-    tanqueFinal.desligaAtuador(1);
+    desligarTudo();
 
     processo.etapaAtual = processo.controleEtapa = Processo::Etapa::Inicial;
     return;
