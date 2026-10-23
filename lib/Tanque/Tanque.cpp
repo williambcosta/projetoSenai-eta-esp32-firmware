@@ -28,12 +28,12 @@ Tanque::Tanque(const std::vector<SaidaDigital>& atuadores, uint8_t pinoNivelAlto
 
 // Função que indica se o nível da água do tanque está alto
 bool Tanque::isNivelAlto() {
-  return digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == HIGH;
+  return digitalRead(this->pinoNivelAlto) == LOW && digitalRead(this->pinoNivelBaixo) == HIGH;
 }
 
 // Função que indica se o tanque está vazio
 bool Tanque::isNivelBaixo() {
-  return digitalRead(this->pinoNivelAlto) == LOW && digitalRead(this->pinoNivelBaixo) == LOW;
+  return digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == LOW;
 }
 
 /**
@@ -41,7 +41,7 @@ bool Tanque::isNivelBaixo() {
  * estiver acionado e o baixo não, mas pode ser útil para identificar problemas.
  */
 bool Tanque::isFalhaSensores() {
-  if (digitalRead(this->pinoNivelAlto) == HIGH && digitalRead(this->pinoNivelBaixo) == LOW) {
+  if (digitalRead(this->pinoNivelAlto) == LOW && digitalRead(this->pinoNivelBaixo) == LOW) {
     return true;
   }
 
@@ -50,7 +50,7 @@ bool Tanque::isFalhaSensores() {
 
 // Função que retorna o estado do sensor de nível alto
 bool Tanque::getEstadoNivelAlto() {
-  return digitalRead(this->pinoNivelAlto) == HIGH;
+  return digitalRead(this->pinoNivelAlto) == LOW;
 }
 
 // Função que retorna o estado do sensor de nível baixo
