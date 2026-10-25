@@ -151,6 +151,7 @@ int tempoDescargaEfluentes = 30000;    // Tempo que a bomba de transferencia do 
 int tempoCoagulacao = 300000;          // Tempo de espera para que a coagulação aconteça
 int tempoTratamentoUv = 300000;        // Tempo mínimo de espera para que o tratamento UV seja efetivo
 int tempoUpdate = 2000;                // Tempo de atualização da telemetria enviada ao broker MQTT
+int tempoReinicio = 5000;              // Tempo de espera para que o ciclo seja reiniciado após a finalização
 
 // Temporizadores
 unsigned long dtDosagemCoagulante = 0;     // Tempo percorrido de dosagem de coagulante
@@ -164,6 +165,7 @@ unsigned long dtHomogeneizacao = 0;        // Tempo percorrido de homogeneizaç�
 unsigned long dtCoagulacao = 0;            // Tempo percorrido de coagulação dos residuos do tanque de ativos
 unsigned long dtPausaDosagem = 0;          // Tempo percorrido de pausa de dosagem para homogeneização da água
 unsigned long dtUpdate = 0;                // Tempo percorrido de atualização da telemetria
+unsigned long dtReinicio = 0;              // Tempo percorrido para a reinicialização do ciclo
 // unsigned long dt = 0;                      // Tempo de duração de uma interação inteira de loop
 
 // Parâmetros das caracteristicas da água
@@ -874,7 +876,14 @@ void loop() {
 
     if (processo.etapaAtual == Processo::Etapa::TratamentoUv) {  // Tratamento UV
       if (millis() - dtFinal >= tempoTratamentoUv) {             // (9.6) Se tempo de tratamento mínimo atingido
-        processo.etapaAtual = Processo::Etapa::Finalizado;       // (-> 9.7) Muda etapa do processo para Finalizado
+        dtReinicio = millis();
+        processo.etapaAtual = Processo::Etapa::Finalizado;  // (-> 9.7) Muda etapa do processo para Finalizado
+      }
+    }
+
+    if (processo.etapaAtual == Processo::Etapa::Finalizado) {  // Tratamento UV
+      if (millis() - dtReinicio >= tempoReinicio) {            // (9.6) Se tempo de tratamento mínimo atingido
+        processo.etapaAtual = Processo::Etapa::Inicial;        // (-> 9.7) Muda etapa do processo para Finalizado
       }
     }
   }
