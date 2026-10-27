@@ -62,14 +62,14 @@
 #define PIN_SOL_EFLU_SV1 "0.3"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
 #define PIN_SOL_FINAL_SV2 "0.4"  // Pino da solenoide de controle de fluxo para o tanque final
 
-// Misturadores
-#define PIN_RM1_ATIV "0.5"   // Pino do misturador do tanque de ativos
-#define PIN_RM2_FINAL "0.6"  // Pino do misturador do tanque final
-
 // Dosadores
+#define PIN_DOSADOR_CaCO3_DM2 "0.5"  // Pino do dosador de carbonato
+#define PIN_DOSADOR_NaClO_DM3 "0.6"  // Pino do dosador de hipoclorito
 #define PIN_DOSADOR_FeCl3_DM1 "0.7"  // Pino do dosador de cloreto
-#define PIN_DOSADOR_CaCO3_DM2 "1.0"  // Pino do dosador de carbonato
-#define PIN_DOSADOR_NaClO_DM3 "1.1"  // Pino do dosador de hipoclorito
+
+// Misturadores
+#define PIN_RM1_ATIV "1.0"   // Pino do misturador do tanque de ativos
+#define PIN_RM2_FINAL "1.1"  // Pino do misturador do tanque final
 
 // Lâmpadas
 #define PIN_LAMPADA_H1 "1.2"  // Pino da lâmpada UV
@@ -110,7 +110,7 @@ SensorPH phAtivos = SensorPH(PIN_PH_ATIVOS, 5, 4.0f, 3705.5, 3105.0f, 10.0f, 268
 std::vector<SaidaDigital> saidasAtivos = {
     // Indices
     SaidaDigital(PIN_BOMBA_PM2),          // 0 - Bomba de teansferencia do tanque de ativos para tanque final/efluentes
-    SaidaDigital(PIN_RM1_ATIV),           // 1 - Mexedor
+    SaidaDigital(PIN_RM1_ATIV, LOW),           // 1 - Mexedor
     SaidaDigital(PIN_DOSADOR_FeCl3_DM1),  // 2 - Coagulante
     SaidaDigital(PIN_DOSADOR_CaCO3_DM2),  // 3 - Alcalinizante
     SaidaDigital(PIN_DOSADOR_NaClO_DM3),  // 4 - Sanitizante
@@ -130,7 +130,7 @@ SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 5, 2.0f, 0.0f);        
 SensorPH phFinal = SensorPH(PIN_PH_FINAL, 5, 4.0f, 3705.5, 3105.0f, 10.0f, 2684.0f);  // Ph
 
 // Atuadores
-std::vector<SaidaDigital> saidasFinal = {SaidaDigital(PIN_RM2_FINAL), SaidaDigital(PIN_LAMPADA_H1)};
+std::vector<SaidaDigital> saidasFinal = {SaidaDigital(PIN_RM2_FINAL, LOW), SaidaDigital(PIN_LAMPADA_H1, LOW)};
 
 // Instancia
 TanqueTratamento tanqueFinal = TanqueTratamento(tempFinal, phFinal, ntuFinal, saidasFinal, PIN_SNA_FINAL, PIN_SNB_FINAL);
