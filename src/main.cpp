@@ -54,9 +54,9 @@
 #define DADOS 27  // Entrada de dados serial. É por onde os bits entram no chip, um de cada vez.
 
 // Dosadores
-#define PIN_DOSADOR_CaCO3_DM2 "0.0"  // Pino do dosador de carbonato
-#define PIN_DOSADOR_NaClO_DM3 "0.1"  // Pino do dosador de hipoclorito
-#define PIN_DOSADOR_FeCl3_DM1 "0.2"  // Pino do dosador de cloreto
+#define PIN_DOSADOR_FeCl3_DM1 "0.0"  // Pino do dosador de cloreto
+#define PIN_DOSADOR_CaCO3_DM2 "0.1"  // Pino do dosador de carbonato
+#define PIN_DOSADOR_NaClO_DM3 "0.2"  // Pino do dosador de hipoclorito
 
 // Bombas de transferência
 #define PIN_BOMBA_PM1 "0.3"  // Pino da bomba de transferência para tanque de ativos
@@ -110,12 +110,12 @@ SensorPH phAtivos = SensorPH(PIN_PH_ATIVOS, 5, 4.0f, 3705.5, 3105.0f, 10.0f, 268
 std::vector<SaidaDigital> saidasAtivos = {
     // Indices
     SaidaDigital(PIN_BOMBA_PM2),          // 0 - Bomba de teansferencia do tanque de ativos para tanque final/efluentes
-    SaidaDigital(PIN_RM1_ATIV, LOW),           // 1 - Mexedor
+    SaidaDigital(PIN_RM1_ATIV, LOW),      // 1 - Mexedor
     SaidaDigital(PIN_DOSADOR_FeCl3_DM1),  // 2 - Coagulante
     SaidaDigital(PIN_DOSADOR_CaCO3_DM2),  // 3 - Alcalinizante
     SaidaDigital(PIN_DOSADOR_NaClO_DM3),  // 4 - Sanitizante
-    SaidaDigital(PIN_SOL_EFLU_SV1, LOW),       // 5 - Solenoide de controle de fluxo para efluentes
-    SaidaDigital(PIN_SOL_FINAL_SV2, LOW)       // 6 - Solenoide de controle de fluxo para tanque final
+    SaidaDigital(PIN_SOL_EFLU_SV1, LOW),  // 5 - Solenoide de controle de fluxo para efluentes
+    SaidaDigital(PIN_SOL_FINAL_SV2, LOW)  // 6 - Solenoide de controle de fluxo para tanque final
 };
 
 // Instancia
@@ -194,14 +194,18 @@ void setup() {
 
   Serial.begin(115200);  // Inicializa a comunicação serial
 
+  // Inicializa o registrador de deslocamento
+  ShiftRegister::Instance().begin(DADOS, CLK, LATCH);
+  ShiftRegister::Instance().setAutoAtualizacao(false);
+
   // Inicializa os tanques
   tanqueArmazenamento.begin();
   tanqueAtivos.begin();
   tanqueEfluentes.begin();
   tanqueFinal.begin();
 
-  // Inicializa o registrador de deslocamento
-  ShiftRegister::Instance().begin(DADOS, CLK, LATCH);
+  ShiftRegister::Instance().atualizarSaidas();
+  ShiftRegister::Instance().setAutoAtualizacao(false);
 
   // Inicializa a comunicação MQTT com os tópicos de comandos, dados e alertas alem de conectar ao broker e wifi
   mqtt.begin("eta/comandos", "eta/telemetria", "eta/alertas");
