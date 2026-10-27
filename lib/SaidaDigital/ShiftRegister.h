@@ -2,7 +2,7 @@
  * Declaração da classe ShiftRegister para controle de registradores de deslocamento. Ela será responsável
  * por gerenciar a comunicação com os registradores de deslocamento 74HC595, permitindo o controle de múltiplas
  * saídas digitais a partir de um número limitado de pinos do microcontrolador.
- * 
+ *
  * Ligação dos terminais do 74HC595:
  * - VCC (Pino 16): Conectar ao pino de 5V do microcontrolador.
  * - GND (Pino 8): Conectar ao pino de terra do microcontrolador.
@@ -25,7 +25,7 @@ class ShiftRegister {
   uint8_t latchPin = 26;  // Pino de latch do registrador de deslocamento
   uint8_t dataPin = 27;   // Pino de dados do registrador de deslocamento
 
-  bool autoAtualizacao = true;  // Indica se as saídas devem ser atualizadas automaticamente após cada alteração
+  bool autoAtualizacao = false;  // Indica se as saídas devem ser atualizadas automaticamente após cada alteração
 
   // Armazena o estado atual dos pinos de saída dos registradores
   byte dados[2] = {

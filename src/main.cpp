@@ -194,17 +194,14 @@ void setup() {
 
   Serial.begin(115200);  // Inicializa a comunicação serial
 
-  // Inicializa o registrador de deslocamento
-  ShiftRegister::Instance().begin(DADOS, CLK, LATCH);
-  ShiftRegister::Instance().setAutoAtualizacao(false);
-
   // Inicializa os tanques
   tanqueArmazenamento.begin();
   tanqueAtivos.begin();
   tanqueEfluentes.begin();
   tanqueFinal.begin();
-
-  ShiftRegister::Instance().atualizarSaidas();
+  
+  // Inicializa o registrador de deslocamento
+  ShiftRegister::Instance().begin(DADOS, CLK, LATCH);
   ShiftRegister::Instance().setAutoAtualizacao(true);
 
   // Inicializa a comunicação MQTT com os tópicos de comandos, dados e alertas alem de conectar ao broker e wifi
