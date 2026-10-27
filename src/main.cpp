@@ -67,12 +67,12 @@
 #define PIN_LAMPADA_H1 "0.6"  // Pino da lâmpada UV
 
 // Solenoides
-#define PIN_SOL_EFLU_SV1 "0.0"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
-#define PIN_SOL_FINAL_SV2 "0.1"  // Pino da solenoide de controle de fluxo para o tanque final
+#define PIN_SOL_EFLU_SV1 "1.0"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
+#define PIN_SOL_FINAL_SV2 "1.1"  // Pino da solenoide de controle de fluxo para o tanque final
 
 // Misturadores
-#define PIN_RM1_ATIV "0.2"   // Pino do misturador do tanque de ativos
-#define PIN_RM2_FINAL "0.3"  // Pino do misturador do tanque final
+#define PIN_RM1_ATIV "1.2"   // Pino do misturador do tanque de ativos
+#define PIN_RM2_FINAL "1.3"  // Pino do misturador do tanque final
 
 // Instancia da estrutura do processo
 Processo processo;
