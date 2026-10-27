@@ -205,7 +205,7 @@ void setup() {
   tanqueFinal.begin();
 
   ShiftRegister::Instance().atualizarSaidas();
-  ShiftRegister::Instance().setAutoAtualizacao(false);
+  ShiftRegister::Instance().setAutoAtualizacao(true);
 
   // Inicializa a comunicação MQTT com os tópicos de comandos, dados e alertas alem de conectar ao broker e wifi
   mqtt.begin("eta/comandos", "eta/telemetria", "eta/alertas");
