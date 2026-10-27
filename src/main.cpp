@@ -53,26 +53,26 @@
 #define LATCH 26  // Clock de armazenamento ou Latch. Um pulso aqui transfere os dados armazenados internamente para os pinos de saída (Q0–Q7) de uma só vez
 #define DADOS 27  // Entrada de dados serial. É por onde os bits entram no chip, um de cada vez.
 
-// Bombas de transferência
-#define PIN_BOMBA_PM1 "0.0"  // Pino da bomba de transferência para tanque de ativos
-#define PIN_BOMBA_PM2 "0.1"  // Pino da bomba de transferência para final/efluentes
-#define PIN_BOMBA_PM3 "0.2"  // Pino da bomba de retorno para tanque de armazenamento
-
-// Solenoides
-#define PIN_SOL_EFLU_SV1 "0.3"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
-#define PIN_SOL_FINAL_SV2 "0.4"  // Pino da solenoide de controle de fluxo para o tanque final
-
 // Dosadores
-#define PIN_DOSADOR_CaCO3_DM2 "0.5"  // Pino do dosador de carbonato
-#define PIN_DOSADOR_NaClO_DM3 "0.6"  // Pino do dosador de hipoclorito
-#define PIN_DOSADOR_FeCl3_DM1 "0.7"  // Pino do dosador de cloreto
+#define PIN_DOSADOR_CaCO3_DM2 "0.0"  // Pino do dosador de carbonato
+#define PIN_DOSADOR_NaClO_DM3 "0.1"  // Pino do dosador de hipoclorito
+#define PIN_DOSADOR_FeCl3_DM1 "0.2"  // Pino do dosador de cloreto
 
-// Misturadores
-#define PIN_RM1_ATIV "1.0"   // Pino do misturador do tanque de ativos
-#define PIN_RM2_FINAL "1.1"  // Pino do misturador do tanque final
+// Bombas de transferência
+#define PIN_BOMBA_PM1 "0.3"  // Pino da bomba de transferência para tanque de ativos
+#define PIN_BOMBA_PM2 "0.4"  // Pino da bomba de transferência para final/efluentes
+#define PIN_BOMBA_PM3 "0.5"  // Pino da bomba de retorno para tanque de armazenamento
 
 // Lâmpadas
-#define PIN_LAMPADA_H1 "1.2"  // Pino da lâmpada UV
+#define PIN_LAMPADA_H1 "0.6"  // Pino da lâmpada UV
+
+// Solenoides
+#define PIN_SOL_EFLU_SV1 "0.0"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
+#define PIN_SOL_FINAL_SV2 "0.1"  // Pino da solenoide de controle de fluxo para o tanque final
+
+// Misturadores
+#define PIN_RM1_ATIV "0.2"   // Pino do misturador do tanque de ativos
+#define PIN_RM2_FINAL "0.3"  // Pino do misturador do tanque final
 
 // Instancia da estrutura do processo
 Processo processo;
@@ -114,8 +114,8 @@ std::vector<SaidaDigital> saidasAtivos = {
     SaidaDigital(PIN_DOSADOR_FeCl3_DM1),  // 2 - Coagulante
     SaidaDigital(PIN_DOSADOR_CaCO3_DM2),  // 3 - Alcalinizante
     SaidaDigital(PIN_DOSADOR_NaClO_DM3),  // 4 - Sanitizante
-    SaidaDigital(PIN_SOL_EFLU_SV1),       // 5 - Solenoide de controle de fluxo para efluentes
-    SaidaDigital(PIN_SOL_FINAL_SV2)       // 6 - Solenoide de controle de fluxo para tanque final
+    SaidaDigital(PIN_SOL_EFLU_SV1, LOW),       // 5 - Solenoide de controle de fluxo para efluentes
+    SaidaDigital(PIN_SOL_FINAL_SV2, LOW)       // 6 - Solenoide de controle de fluxo para tanque final
 };
 
 // Instancia
@@ -130,7 +130,7 @@ SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 5, 2.0f, 0.0f);        
 SensorPH phFinal = SensorPH(PIN_PH_FINAL, 5, 4.0f, 3705.5, 3105.0f, 10.0f, 2684.0f);  // Ph
 
 // Atuadores
-std::vector<SaidaDigital> saidasFinal = {SaidaDigital(PIN_RM2_FINAL, LOW), SaidaDigital(PIN_LAMPADA_H1, LOW)};
+std::vector<SaidaDigital> saidasFinal = {SaidaDigital(PIN_RM2_FINAL, LOW), SaidaDigital(PIN_LAMPADA_H1)};
 
 // Instancia
 TanqueTratamento tanqueFinal = TanqueTratamento(tempFinal, phFinal, ntuFinal, saidasFinal, PIN_SNA_FINAL, PIN_SNB_FINAL);
