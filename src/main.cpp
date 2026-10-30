@@ -400,10 +400,6 @@ void loop() {
           tanqueArmazenamento.desligaAtuador(0);                       // Desliga a bomba
           processo.etapaAtual = Processo::Etapa::Inicial;              // Atualiza o controle do processo para voltar ao inicio caso o modo de operação volte a automatico
         } else {                                                       // Caso esteja desligada, indica que o comando é para ligar
-          Serial.println(tanqueArmazenamento.isNivelBaixo());
-          Serial.println(!mqtt.isAlertaEnviado(19));
-          Serial.println(tanqueAtivos.isNivelAlto());
-          Serial.println(!mqtt.isAlertaEnviado(20));
           if (tanqueArmazenamento.isNivelBaixo()) {                                                                            // Se tanque inicial em nível baixo
             Serial.println("[main - loop] Erro ao ligar PM1 via comando: Tanque de Armazenamento em nível baixo. Alerta 19");  //
             mqtt.ativarAlerta(19);                                                                                             // Envia alerta

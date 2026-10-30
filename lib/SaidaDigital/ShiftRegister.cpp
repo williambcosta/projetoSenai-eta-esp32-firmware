@@ -46,14 +46,26 @@ void ShiftRegister::setSaida(uint8_t byteIndex, uint8_t bitIndex, bool valor) {
 
 // Define o estado de uma saída específica no registrador de deslocamento usando a notação "x.y" sendo x o byte e y o bit
 void ShiftRegister::setSaida(std::string saida, bool valor) {
-  uint8_t byteIndex = saida[0] - '0';           // Converte o caractere do byte para um índice numérico
-  uint8_t bitIndex = saida[2] - '0';            // Converte o caractere do bit para um índice numérico
+  uint8_t byteIndex = saida[0] - '0';  // Converte o caractere do byte para um índice numérico
+  uint8_t bitIndex = saida[2] - '0';   // Converte o caractere do bit para um índice numérico
 
   setSaida(byteIndex, bitIndex, valor);  // Chama a função setSaida para atualizar o estado da saída
 }
 
 // Atualiza os pinos de saída do registrador de deslocamento com os valores armazenados no array de dados
 void ShiftRegister::atualizarSaidas() {
+  Serial.print("=================================");
+  for (int n = 0; n < 2; n++) {
+    Serial.print("U");
+    Serial.print(n+1);
+    Serial.print(": ");
+    for (int m = 0; m < 8; m++) {
+      Serial.print(!!((dados[n] << m) & 0x80));
+    }
+    Serial.println("\n");
+  }
+  Serial.print("=================================");
+
   digitalWrite(latchPin, LOW);  // Coloca o pino de latch em LOW para iniciar a atualização dos pinos de saída
 
   int8_t tamanho = sizeof(dados) / sizeof(dados[0]);  // Calcula o tamanho do array de dados
