@@ -52,27 +52,28 @@
 #define CLK 25    // Clock do registrador de deslocamento. Cada pulso nesse pino lê o bit que está na entrada DS e o desloca internamente um a um.
 #define LATCH 26  // Clock de armazenamento ou Latch. Um pulso aqui transfere os dados armazenados internamente para os pinos de saída (Q0–Q7) de uma só vez
 #define DADOS 27  // Entrada de dados serial. É por onde os bits entram no chip, um de cada vez.
+#define OE 33     // Habilita/Desabilita as saídas
 
 // Dosadores
-#define PIN_DOSADOR_FeCl3_DM1 "0.0"  // Pino do dosador de cloreto
-#define PIN_DOSADOR_CaCO3_DM2 "0.1"  // Pino do dosador de carbonato
-#define PIN_DOSADOR_NaClO_DM3 "0.2"  // Pino do dosador de hipoclorito
+#define PIN_DOSADOR_FeCl3_DM1 "1.1"  // Pino do dosador de cloreto
+#define PIN_DOSADOR_CaCO3_DM2 "1.0"  // Pino do dosador de carbonato
+#define PIN_DOSADOR_NaClO_DM3 "0.7"  // Pino do dosador de hipoclorito
 
 // Bombas de transferência
-#define PIN_BOMBA_PM1 "0.3"  // Pino da bomba de transferência para tanque de ativos
-#define PIN_BOMBA_PM2 "0.4"  // Pino da bomba de transferência para final/efluentes
-#define PIN_BOMBA_PM3 "0.5"  // Pino da bomba de retorno para tanque de armazenamento
+#define PIN_BOMBA_PM1 "0.0"  // Pino da bomba de transferência para tanque de ativos
+#define PIN_BOMBA_PM2 "0.1"  // Pino da bomba de transferência para final/efluentes
+#define PIN_BOMBA_PM3 "0.2"  // Pino da bomba de retorno para tanque de armazenamento
 
 // Lâmpadas
-#define PIN_LAMPADA_H1 "0.6"  // Pino da lâmpada UV
+#define PIN_LAMPADA_H1 "1.2"  // Pino da lâmpada UV
 
 // Solenoides
-#define PIN_SOL_EFLU_SV1 "1.0"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
-#define PIN_SOL_FINAL_SV2 "1.1"  // Pino da solenoide de controle de fluxo para o tanque final
+#define PIN_SOL_EFLU_SV1 "0.3"   // Pino da solenoide de controle de fluxo para o tanque de efluentes
+#define PIN_SOL_FINAL_SV2 "0.4"  // Pino da solenoide de controle de fluxo para o tanque final
 
 // Misturadores
-#define PIN_RM1_ATIV "1.2"   // Pino do misturador do tanque de ativos
-#define PIN_RM2_FINAL "1.3"  // Pino do misturador do tanque final
+#define PIN_RM1_ATIV "0.5"   // Pino do misturador do tanque de ativos
+#define PIN_RM2_FINAL "0.6"  // Pino do misturador do tanque final
 
 // Instancia da estrutura do processo
 Processo processo;
@@ -194,15 +195,16 @@ void setup() {
 
   Serial.begin(115200);  // Inicializa a comunicação serial
 
+  // Inicializa o registrador de deslocamento
+  ShiftRegister::Instance().begin(DADOS, CLK, LATCH, OE);
+  ShiftRegister::Instance().habilitaSaidas();
+  ShiftRegister::Instance().atualizarSaidas();
+
   // Inicializa os tanques
   tanqueArmazenamento.begin();
   tanqueAtivos.begin();
   tanqueEfluentes.begin();
   tanqueFinal.begin();
-  
-  // Inicializa o registrador de deslocamento
-  ShiftRegister::Instance().begin(DADOS, CLK, LATCH);
-  ShiftRegister::Instance().setAutoAtualizacao(true);
 
   // Inicializa a comunicação MQTT com os tópicos de comandos, dados e alertas alem de conectar ao broker e wifi
   mqtt.begin("eta/comandos", "eta/telemetria", "eta/alertas");
@@ -254,8 +256,6 @@ void setup() {
     Serial.print("\nFalha ao processar JSON: ");
     Serial.println(erro.f_str());
   }
-
-  delay(5000);  // Aguarda 5 segundos para garantir que o sistema esteja estável antes de sincronizar a hora com o servidor NTP
 
   // Configuração de data e hora
   configTime(-3 * 3600, 0, "pool.ntp.org");  // Configura o fuso horário para o horário de Brasília (UTC-3) e define o servidor NTP para sincronização do tempo
@@ -350,11 +350,113 @@ void desligarTudo() {
   tanqueFinal.desligaAtuador(1);
 }
 
+void enviaTelemetria() {
+  atualizaTelemetria();                               // Atualiza os dados do processo no objeto JSON e no buffer para envio
+  mqtt.publish(TOPICO_TELEMETRIA, bufferTelemetria);  // Envia a telemetria atualizada para o broker MQTT no tópico definido
+  mqtt.publicarMensagensAlerta(forcarReenvio);        // Publica mensagens de alerta acumuladas no buffer, caso existam
+  dtUpdate = millis();                                // Atualiza o temporizador de atualização da telemetria para o próximo envio
+  forcarReenvio = false;
+}
+
 /*******************************************************************************************************************************/
 /***** LOOP PRINCIPAL **********************************************************************************************************/
 /*******************************************************************************************************************************/
 void loop() {
   // dt = millis();
+
+  /******************************************/
+  /***** Envio de mensagens *****************/
+  /******************************************/
+
+  // Envia as informações do processo para o broker MQTT
+  if (((millis() - dtUpdate) >= tempoUpdate) && mqtt.isConnected()) {
+    /******************************************/
+    /***** Alertas ****************************/
+    /******************************************/
+    // Chaves de nível //
+    if (tanqueArmazenamento.isFalhaSensores()) {
+      mqtt.ativarAlerta(1);
+    }
+
+    if (tanqueAtivos.isFalhaSensores()) {
+      mqtt.ativarAlerta(3);
+    }
+
+    if (tanqueFinal.isFalhaSensores()) {
+      mqtt.ativarAlerta(5);
+    }
+
+    if (tanqueEfluentes.isFalhaSensores()) {
+      mqtt.ativarAlerta(7);
+    }
+
+    // pH //
+    tempFloat = tanqueAtivos.getPH();
+    if (tempFloat <= 4.0f) {
+      mqtt.ativarAlerta(8);
+    }
+
+    if (tempFloat >= 8.0f) {
+      mqtt.ativarAlerta(9);
+    }
+
+    tempFloat = tanqueFinal.getPH();
+    if (tempFloat <= 4.0f) {
+      mqtt.ativarAlerta(10);
+    }
+
+    if (tempFloat >= 8.0f) {
+      mqtt.ativarAlerta(11);
+    }
+
+    // Turbidez //
+    if (tanqueFinal.getTurbidez() >= 5.0f) {
+      mqtt.ativarAlerta(12);
+    }
+
+    // Temperatura //
+    tempFloat = tempArmaz.getTemperatura();
+    if (tempFloat <= 15.0f) {
+      mqtt.ativarAlerta(13);
+    }
+
+    if (tempFloat <= -999.9) {
+      mqtt.ativarAlerta(2);
+    }
+
+    if (tempFloat >= 35.0f) {
+      mqtt.ativarAlerta(14);
+    }
+
+    tempFloat = tanqueAtivos.getTemperatura();
+    if (tempFloat <= 15.0f) {
+      mqtt.ativarAlerta(15);
+    }
+
+    if (tempFloat <= -999.9) {
+      mqtt.ativarAlerta(4);
+    }
+
+    if (tempFloat >= 35.0f) {
+      mqtt.ativarAlerta(16);
+    }
+
+    tempFloat = tanqueFinal.getTemperatura();
+    if (tempFloat <= 15.0f) {
+      mqtt.ativarAlerta(17);
+    }
+
+    if (tempFloat <= -999.9) {
+      mqtt.ativarAlerta(6);
+    }
+
+    if (tempFloat >= 35.0f) {
+      mqtt.ativarAlerta(18);
+    }
+
+    enviaTelemetria();
+  }
+
   /******************************************/
   /***** Tratamento de comandos *************/
   /******************************************/
@@ -393,13 +495,13 @@ void loop() {
       // O modo manual tenta garantir que o processo continue dependendo do comando. Ex: caso o comando seja ligar PM2 com SV2 ligado etapa vai ser esvaziando tanque Ativos.
       // Isso vai ser dificil de testar, provávelmente para o protótipo seja mais interessante continuar de onde estava antes do modo manual
 
-      if (strcmp(mensagem, "PM1") == 0) {                              // Caso comando PM1
-        Serial.println("\n[main - loop] Tratando comando PM1");        //
-        if (tanqueArmazenamento.isAtuadorLigado(0)) {                  // Se a bomba PM1 estiver ligada, indica que o comando é para desligar a bomba
-          Serial.println("[main - loop] Desligando PM1 via comando");  //
-          tanqueArmazenamento.desligaAtuador(0);                       // Desliga a bomba
-          processo.etapaAtual = Processo::Etapa::Inicial;              // Atualiza o controle do processo para voltar ao inicio caso o modo de operação volte a automatico
-        } else {                                                       // Caso esteja desligada, indica que o comando é para ligar
+      if (strcmp(mensagem, "PM1") == 0) {                                                                                      // Caso comando PM1
+        Serial.println("\n[main - loop] Tratando comando PM1");                                                                //
+        if (tanqueArmazenamento.isAtuadorLigado(0)) {                                                                          // Se a bomba PM1 estiver ligada, indica que o comando é para desligar a bomba
+          Serial.println("[main - loop] Desligando PM1 via comando");                                                          //
+          tanqueArmazenamento.desligaAtuador(0);                                                                               // Desliga a bomba
+          processo.etapaAtual = Processo::Etapa::Inicial;                                                                      // Atualiza o controle do processo para voltar ao inicio caso o modo de operação volte a automatico
+        } else {                                                                                                               // Caso esteja desligada, indica que o comando é para ligar
           if (tanqueArmazenamento.isNivelBaixo()) {                                                                            // Se tanque inicial em nível baixo
             Serial.println("[main - loop] Erro ao ligar PM1 via comando: Tanque de Armazenamento em nível baixo. Alerta 19");  //
             mqtt.ativarAlerta(19);                                                                                             // Envia alerta
@@ -478,6 +580,7 @@ void loop() {
         if (tanqueAtivos.isAtuadorLigado(5)) {                                                               // Se a solenoide SV1 estiver ligada, indica que o comando é para desligar a mesma
           Serial.println("[main - loop] Desligando SV1 via comando");                                        //
           tanqueAtivos.desligaAtuador(5);                                                                    // Desliga a solenoide de controle de fluxo para o tanque de efluentes
+          tanqueAtivos.desligaAtuador(0);                                                                    // Desliga PM2
         } else {                                                                                             // Caso contrario
           if (tanqueAtivos.isAtuadorLigado(6)) {                                                             // Se a solenoide SV2 estiver ligada
             Serial.println("[main - loop] Erro ao ligar SV1 via comando: Solenoide SV2 ligada. Alerta 27");  //
@@ -492,6 +595,7 @@ void loop() {
         if (tanqueAtivos.isAtuadorLigado(6)) {                                                               // Se a solenoide SV2 estiver ligada, indica que o comando é para desligar a mesma
           Serial.println("[main - loop] Desligando SV2 via comando");                                        //
           tanqueAtivos.desligaAtuador(6);                                                                    // Desliga a solenoide de controle de fluxo para o tanque final
+          tanqueAtivos.desligaAtuador(0);                                                                    // Desliga PM2
         } else {                                                                                             // Caso contrario
           if (tanqueAtivos.isAtuadorLigado(5)) {                                                             // Se a solenoide SV1 estiver ligada
             Serial.println("[main - loop] Erro ao ligar SV2 via comando: Solenoide SV1 ligada. Alerta 28");  //
@@ -883,103 +987,6 @@ void loop() {
         processo.etapaAtual = Processo::Etapa::Inicial;        // (-> 9.7) Muda etapa do processo para Finalizado
       }
     }
-  }
-
-  /******************************************/
-  /***** Envio de mensagens *****************/
-  /******************************************/
-
-  // Envia as informações do processo para o broker MQTT
-  if (((millis() - dtUpdate) >= tempoUpdate) && mqtt.isConnected()) {
-    /******************************************/
-    /***** Alertas ****************************/
-    /******************************************/
-    // Chaves de nível //
-    if (tanqueArmazenamento.isFalhaSensores()) {
-      mqtt.ativarAlerta(1);
-    }
-
-    if (tanqueAtivos.isFalhaSensores()) {
-      mqtt.ativarAlerta(3);
-    }
-
-    if (tanqueFinal.isFalhaSensores()) {
-      mqtt.ativarAlerta(5);
-    }
-
-    if (tanqueEfluentes.isFalhaSensores()) {
-      mqtt.ativarAlerta(7);
-    }
-
-    // pH //
-    tempFloat = tanqueAtivos.getPH();
-    if (tempFloat <= 4.0f) {
-      mqtt.ativarAlerta(8);
-    }
-
-    if (tempFloat >= 8.0f) {
-      mqtt.ativarAlerta(9);
-    }
-
-    tempFloat = tanqueFinal.getPH();
-    if (tempFloat <= 4.0f) {
-      mqtt.ativarAlerta(10);
-    }
-
-    if (tempFloat >= 8.0f) {
-      mqtt.ativarAlerta(11);
-    }
-
-    // Turbidez //
-    if (tanqueFinal.getTurbidez() >= 5.0f) {
-      mqtt.ativarAlerta(12);
-    }
-
-    // Temperatura //
-    tempFloat = tempArmaz.getTemperatura();
-    if (tempFloat <= 15.0f) {
-      mqtt.ativarAlerta(13);
-    }
-
-    if (tempFloat <= -999.9) {
-      mqtt.ativarAlerta(2);
-    }
-
-    if (tempFloat >= 35.0f) {
-      mqtt.ativarAlerta(14);
-    }
-
-    tempFloat = tanqueAtivos.getTemperatura();
-    if (tempFloat <= 15.0f) {
-      mqtt.ativarAlerta(15);
-    }
-
-    if (tempFloat <= -999.9) {
-      mqtt.ativarAlerta(4);
-    }
-
-    if (tempFloat >= 35.0f) {
-      mqtt.ativarAlerta(16);
-    }
-
-    tempFloat = tanqueFinal.getTemperatura();
-    if (tempFloat <= 15.0f) {
-      mqtt.ativarAlerta(17);
-    }
-
-    if (tempFloat <= -999.9) {
-      mqtt.ativarAlerta(6);
-    }
-
-    if (tempFloat >= 35.0f) {
-      mqtt.ativarAlerta(18);
-    }
-
-    atualizaTelemetria();                               // Atualiza os dados do processo no objeto JSON e no buffer para envio
-    mqtt.publish(TOPICO_TELEMETRIA, bufferTelemetria);  // Envia a telemetria atualizada para o broker MQTT no tópico definido
-    mqtt.publicarMensagensAlerta(forcarReenvio);        // Publica mensagens de alerta acumuladas no buffer, caso existam
-    dtUpdate = millis();                                // Atualiza o temporizador de atualização da telemetria para o próximo envio
-    forcarReenvio = false;
   }
 
   // Serial.print("\nTempo total dentro de loop(): ");

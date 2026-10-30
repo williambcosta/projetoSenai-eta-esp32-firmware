@@ -11,16 +11,17 @@ ShiftRegister& ShiftRegister::Instance() {
 }
 
 // Inicializa os pinos do registrador de deslocamento
-void ShiftRegister::begin(uint8_t dataPin, uint8_t clockPin, uint8_t latchPin) {
+void ShiftRegister::begin(uint8_t dataPin, uint8_t clockPin, uint8_t latchPin, uint8_t oePin) {
   this->dataPin = dataPin;
   this->clockPin = clockPin;
   this->latchPin = latchPin;
+  this->oePin = oePin;
 
   pinMode(dataPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(latchPin, OUTPUT);
-
-  atualizarSaidas();
+  pinMode(oePin, OUTPUT);
+  digitalWrite(oePin, HIGH);
 }
 
 // Define se as saídas devem ser atualizadas automaticamente após cada alteração
@@ -54,10 +55,10 @@ void ShiftRegister::setSaida(std::string saida, bool valor) {
 
 // Atualiza os pinos de saída do registrador de deslocamento com os valores armazenados no array de dados
 void ShiftRegister::atualizarSaidas() {
-  Serial.print("=================================");
+  Serial.println("=================================");
   for (int n = 0; n < 2; n++) {
     Serial.print("U");
-    Serial.print(n+1);
+    Serial.print(n + 1);
     Serial.print(": ");
     for (int m = 0; m < 8; m++) {
       Serial.print(!!((dados[n] << m) & 0x80));
@@ -76,6 +77,16 @@ void ShiftRegister::atualizarSaidas() {
   }
 
   digitalWrite(latchPin, HIGH);  // Coloca o pino de latch em HIGH para transferir os dados para as saídas
+}
+
+// Altera o estado do pino OE do micro controlador para habilitar as saídas
+void ShiftRegister::habilitaSaidas() {
+  digitalWrite(oePin, LOW);
+}
+
+/// Altera o estado do pino OE do micro controlador para desabilitar as saídas
+void ShiftRegister::desabilitaSaidas() {
+  digitalWrite(oePin, HIGH);
 }
 
 // Verifica se uma saída específica está atuada (ligada)
