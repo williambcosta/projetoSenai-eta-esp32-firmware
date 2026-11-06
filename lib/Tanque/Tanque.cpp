@@ -1,3 +1,7 @@
+/*******************************************************************************************************************/
+/***** Tanque.cpp **************************************************************************************************/
+/*******************************************************************************************************************/
+
 /**
  * Classe responsável por gerenciar os sensores de temperatura, turbidez e pH do tanque de água, bem como os sensores de nível alto e baixo.
  *
@@ -103,4 +107,5 @@ void Tanque::comutaAtuador(uint8_t indiceAtuador) {
 void Tanque::begin() {
   pinMode(this->pinoNivelAlto, INPUT_PULLUP);
   pinMode(this->pinoNivelBaixo, INPUT_PULLUP);
-};
+}
+/*******************************************************************************************************************/

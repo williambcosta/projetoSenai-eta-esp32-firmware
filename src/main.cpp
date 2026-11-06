@@ -1,6 +1,8 @@
-/*******************************************************************************************************************************/
+/*******************************************************************************************************************/
+/***** main.cpp ****************************************************************************************************/
+/*******************************************************************************************************************/
+
 /***** BIBLIOTECAS *************************************************************************************************************/
-/*******************************************************************************************************************************/
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -19,9 +21,8 @@
 #include "configuracoes.h"  // Configurações de comunicação e Wi-Fi
 #include "processo.h"       // Declaração da estrutura do processo
 
-/*******************************************************************************************************************************/
+
 /***** DEFINICÕES **************************************************************************************************************/
-/*******************************************************************************************************************************/
 /***** Entradas Analógicas *****/
 // Sensores de turbidez
 #define PIN_TBDZ_ATIVOS 34  // Pino do sensor de turbidez da água inicial
@@ -78,9 +79,8 @@
 // Instancia da estrutura do processo
 Processo processo;
 
-/*******************************************************************************************************************************/
+
 /*****  TANQUE DE ARMAZENAMENTO ************************************************************************************************/
-/*******************************************************************************************************************************/
 // Sensores
 SensorTemperatura tempArmaz = SensorTemperatura(PIN_TEMP_INICIAL);  // Temperatura
 
@@ -90,18 +90,16 @@ std::vector<SaidaDigital> saidasArmazenamento = {SaidaDigital(PIN_BOMBA_PM1)};  
 // Instancia
 Tanque tanqueArmazenamento = Tanque(saidasArmazenamento, PIN_SNA_ARMAZENAMENTO, PIN_SNB_ARMAZENAMENTO);  // Instancia do tanque
 
-/*******************************************************************************************************************************/
+
 /******* TANQUE DE EFLUENTES ***************************************************************************************************/
-/*******************************************************************************************************************************/
 // Atuadores
 std::vector<SaidaDigital> saidasEfluentes = {SaidaDigital(PIN_BOMBA_PM3)};
 
 // Instancia
 Tanque tanqueEfluentes = Tanque(saidasEfluentes, PIN_SNA_EFLU, PIN_SNB_EFLU);
 
-/*******************************************************************************************************************************/
+
 /********* TANQUE DE ATIVOS ****************************************************************************************************/
-/*******************************************************************************************************************************/
 // Sensores
 SensorTemperatura tempAtiv = SensorTemperatura(PIN_TEMP_ATIVOS);                        // Temperatura
 SensorTurbidez ntuAtiv = SensorTurbidez(PIN_TBDZ_ATIVOS, 5, 2.0f, 0.0f);                // Turbidez
@@ -122,9 +120,8 @@ std::vector<SaidaDigital> saidasAtivos = {
 // Instancia
 TanqueTratamento tanqueAtivos = TanqueTratamento(tempAtiv, phAtivos, ntuAtiv, saidasAtivos, PIN_SNA_ATIVOS, PIN_SNB_ATIVOS);
 
-/*******************************************************************************************************************************/
+
 /*********** TANQUE FINAL ******************************************************************************************************/
-/*******************************************************************************************************************************/
 // Sensores
 SensorTemperatura tempFinal = SensorTemperatura(PIN_TEMP_FINAL);                      // Temperatura
 SensorTurbidez ntuFinal = SensorTurbidez(PIN_TBDZ_FINAL, 5, 2.0f, 0.0f);              // Turbidez
@@ -136,9 +133,8 @@ std::vector<SaidaDigital> saidasFinal = {SaidaDigital(PIN_RM2_FINAL, LOW), Saida
 // Instancia
 TanqueTratamento tanqueFinal = TanqueTratamento(tempFinal, phFinal, ntuFinal, saidasFinal, PIN_SNA_FINAL, PIN_SNB_FINAL);
 
-/*******************************************************************************************************************************/
+
 /***** VARIÁVEIS UTILITÁRIAS E DE CONTROLE DO PROCESSO *************************************************************************/
-/*******************************************************************************************************************************/
 bool forcarReenvio = false;  // Indica se os alertas devem ser reenviados
 
 // Parâmetros de tempo (em milisegundos)
@@ -186,9 +182,8 @@ char mensagem[128];           //  Buffer para armazenar a mensagem recebida do b
 char bufferTelemetria[1025];  // Buffer para armazenar a telemetria em formato JSON antes de enviar ao broker MQTT
 char dataHoraAtual[25];       // Buffer para armazenar a data e hora atual em formato de string, static garante que a variável permaneça na memória
 
-/*******************************************************************************************************************************/
+
 /***** SETUP *******************************************************************************************************************/
-/*******************************************************************************************************************************/
 // Configuração inicial
 void setup() {
   delay(1000);  // Aguarda 1 segundo para garantir que o sistema esteja estável antes de iniciar a configuração
@@ -274,9 +269,8 @@ void setup() {
   dtUpdate = millis();  // Inicializa o temporizador de atualização da telemetria
 }
 
-/*******************************************************************************************************************************/
+
 /***** ATUALIZA DATA E HORA ****************************************************************************************************/
-/*******************************************************************************************************************************/
 // Atualiza a data e hora atual em formato de (YYYY-MM-DDTHH:MM:SSZ)
 void atualizaDataHoraAtual() {
   struct tm infoData;
@@ -285,9 +279,8 @@ void atualizaDataHoraAtual() {
   }
 }
 
-/*******************************************************************************************************************************/
+
 /***** ATUALIZA TELEMETRIA *****************************************************************************************************/
-/*******************************************************************************************************************************/
 // Atualiza os dados no documento json e o buffer para facilitar o envio da mensagem
 void atualizaTelemetria() {
   atualizaDataHoraAtual();
@@ -358,9 +351,8 @@ void enviaTelemetria() {
   forcarReenvio = false;
 }
 
-/*******************************************************************************************************************************/
+
 /***** LOOP PRINCIPAL **********************************************************************************************************/
-/*******************************************************************************************************************************/
 void loop() {
   // dt = millis();
 
@@ -993,3 +985,4 @@ void loop() {
   // Serial.print(millis() - dt);
   // Serial.println("ms");
 }
+/*******************************************************************************************************************/

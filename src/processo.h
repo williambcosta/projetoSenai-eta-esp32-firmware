@@ -1,3 +1,7 @@
+/*******************************************************************************************************************/
+/***** processo.h ********************************************************************************************/
+/*******************************************************************************************************************/
+
 // Estrutura para armazenar informações sobre o processo de tratamento de água
 struct Processo {
   enum class ModoOperacao {
@@ -84,3 +88,4 @@ struct Processo {
   Etapa etapaAtual = Etapa::Inicial;     // Variável para armazenar a etapa atual do processo
   Etapa controleEtapa = etapaAtual;      // Variável para armazenar a etapa anterior do processo
 };
+/*******************************************************************************************************************/
