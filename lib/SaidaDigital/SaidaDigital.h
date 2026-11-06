@@ -7,9 +7,7 @@
 
 #include <Arduino.h>
 
-#include <vector>
-
-#include "ShiftRegister.h"
+#include <string>
 
 class SaidaDigital {
  private:

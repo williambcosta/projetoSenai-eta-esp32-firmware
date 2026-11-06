@@ -15,6 +15,7 @@
  */
 
 #include "SaidaDigital.h"
+#include "ShiftRegister.h"
 
 SaidaDigital::SaidaDigital(std::string saida) {
   this->byteSaida = saida[0] - '0';  // Converte o caractere do byte para um índice numérico

@@ -25,6 +25,8 @@
  *
  */
 
+#include <Arduino.h>
+
 #include "SensorPH.h"
 
 SensorPH::SensorPH(uint8_t pinoPH) {

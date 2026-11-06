@@ -22,6 +22,7 @@
 #define SHIFT_REGISTER_H
 
 #include <Arduino.h>
+#include <string>
 
 class ShiftRegister {
  private:
@@ -30,7 +31,7 @@ class ShiftRegister {
   uint8_t dataPin = 27;   // Pino de dados do registrador de deslocamento
   uint8_t oePin = 33;     // Pino que habilita as saídas. HIGH = desabilita | LOW = habilita
 
-  bool autoAtualizacao = true;  // Indica se as saídas devem ser atualizadas automaticamente após cada alteração
+  bool autoAtualizacao = false;  // Indica se as saídas devem ser atualizadas automaticamente após cada alteração
 
   // Armazena o estado atual dos pinos de saída dos registradores
   byte dados[2] = {

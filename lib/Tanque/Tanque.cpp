@@ -23,6 +23,7 @@
  */
 
 #include "Tanque.h"
+
 Tanque::Tanque(const std::vector<SaidaDigital>& atuadores, uint8_t pinoNivelAlto, uint8_t pinoNivelBaixo)
     : atuadores(atuadores) {
   // Inicializa os membros da classe

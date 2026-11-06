@@ -6,6 +6,8 @@
  * Implementação da classe ShiftRegister para controle de registradores de deslocamento.
  */
 
+#include <Arduino.h>
+
 #include "ShiftRegister.h"
 
 // Retorna a instância única da classe ShiftRegister

@@ -193,6 +193,7 @@ void setup() {
   // Inicializa o registrador de deslocamento
   ShiftRegister::Instance().begin(DADOS, CLK, LATCH, OE);
   ShiftRegister::Instance().habilitaSaidas();
+  ShiftRegister::Instance().setAutoAtualizacao(true);
   ShiftRegister::Instance().atualizarSaidas();
 
   // Inicializa os tanques

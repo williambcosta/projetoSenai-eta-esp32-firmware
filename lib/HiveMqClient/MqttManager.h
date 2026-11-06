@@ -8,12 +8,10 @@
  * Deve ser configurada informando rede wifi a ser conectado, senha da rede, servidor mqtt, porta, usuário mqtt, senha e o método hundle deve ser
  * chamado na função loop pois a mesma é responsável por verificar a chegada de novas mensagens vindas do servidor.
  */
-
 #ifndef MQTT_MANAGER_H
 #define MQTT_MANAGER_H
 
 #include <PubSubClient.h>
-#include <WiFi.h>
 #include <WiFiClientSecure.h>
 
 #define TOPICO_TELEMETRIA 1  // Definição do tópico de dados

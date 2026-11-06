@@ -5,10 +5,6 @@
 #ifndef TANQUE_TRATAMENTO_H
 #define TANQUE_TRATAMENTO_H
 
-#include <Arduino.h>
-
-#include <vector>
-
 #include "SaidaDigital.h"
 #include "SensorPH.h"
 #include "SensorTemperatura.h"

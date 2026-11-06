@@ -5,8 +5,6 @@
 #ifndef SENSOR_PH_H
 #define SENSOR_PH_H
 
-#include <Arduino.h>
-
 class SensorPH {
  private:
   uint8_t pinoPH = 16;      // Pino do sensor
